@@ -4,266 +4,801 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Dashboard — LockIQ Rates</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --navy: #0f1f3d;
-      --blue: #1a56db;
-      --gold: #f5a623;
-      --light: #f4f6fb;
-      --text: #1e2a3a;
-      --muted: #6b7a90;
+      --bg:        #080f1d;
+      --card:      #0f1f3d;
+      --card-alt:  #132240;
+      --border:    #1a3366;
+      --navy:      #0f1f3d;
+      --blue:      #1a56db;
+      --gold:      #f5a623;
+      --text:      #e8edf5;
+      --muted:     #8aaad4;
+      --green:     #22c55e;
+      --red:       #ef4444;
+      --yellow:    #f59e0b;
     }
 
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background: var(--light);
-      color: var(--text);
-      min-height: 100vh;
-    }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
 
-    /* Loading / error states */
-    #loading-screen {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      min-height: 100vh;
-      gap: 1rem;
-      color: var(--muted);
-    }
-    .spinner {
-      width: 40px;
-      height: 40px;
-      border: 3px solid #dde3ef;
-      border-top-color: var(--blue);
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    #error-screen {
-      display: none;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      min-height: 100vh;
-      gap: 1rem;
-      padding: 2rem;
-      text-align: center;
-    }
-    #error-screen h2 { color: var(--navy); }
-    #error-screen p { color: var(--muted); max-width: 400px; }
-    .btn {
-      display: inline-block;
-      padding: 0.75rem 1.5rem;
-      border-radius: 8px;
-      font-weight: 700;
-      text-decoration: none;
-      font-size: 0.95rem;
-      cursor: pointer;
-      border: none;
-    }
-    .btn-primary { background: var(--blue); color: #fff; }
-    .btn-outline { background: transparent; border: 2px solid var(--blue); color: var(--blue); }
-
-    /* App shell — hidden until auth confirmed */
-    #app-shell { display: none; }
-
-    nav {
-      background: var(--navy);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 2rem;
-      height: 60px;
-    }
-    .logo { color: #fff; font-size: 1.25rem; font-weight: 700; letter-spacing: -0.5px; }
+    /* ── NAV ── */
+    nav { background: var(--navy); display: flex; align-items: center; justify-content: space-between; padding: 0 1.5rem; height: 56px; border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; }
+    .logo { color: #fff; font-size: 1.1rem; font-weight: 700; letter-spacing: -0.5px; }
     .logo span { color: var(--gold); }
     .nav-right { display: flex; align-items: center; gap: 1rem; }
-    .user-email { color: #8aaad4; font-size: 0.85rem; }
-    #sign-out-btn {
-      background: transparent;
-      border: 1px solid rgba(255,255,255,0.3);
-      color: #fff;
-      padding: 0.4rem 1rem;
-      border-radius: 6px;
-      font-size: 0.85rem;
-      cursor: pointer;
-    }
-    #sign-out-btn:hover { background: rgba(255,255,255,0.1); }
+    .nav-meta { display: flex; align-items: center; gap: 1.25rem; }
+    #last-updated { font-size: 0.78rem; color: var(--muted); }
+    #refresh-indicator { width: 8px; height: 8px; border-radius: 50%; background: var(--green); display: inline-block; }
+    #refresh-indicator.stale { background: var(--yellow); }
+    #user-email { color: var(--muted); font-size: 0.8rem; }
+    #sign-out-btn { background: transparent; border: 1px solid rgba(255,255,255,0.2); color: var(--muted); padding: 0.35rem 0.85rem; border-radius: 5px; font-size: 0.78rem; cursor: pointer; }
+    #sign-out-btn:hover { border-color: rgba(255,255,255,0.4); color: #fff; }
 
-    main {
-      max-width: 900px;
-      margin: 0 auto;
-      padding: 4rem 1.5rem;
-      text-align: center;
-    }
-    .coming-soon-badge {
-      display: inline-block;
-      background: var(--gold);
-      color: var(--navy);
-      font-size: 0.75rem;
-      font-weight: 700;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-      padding: 0.3rem 0.8rem;
-      border-radius: 20px;
-      margin-bottom: 1.5rem;
-    }
-    main h1 { font-size: 2.25rem; color: var(--navy); margin-bottom: 1rem; }
-    main p { color: var(--muted); font-size: 1.05rem; line-height: 1.6; max-width: 480px; margin: 0 auto 2rem; }
+    /* ── LOADING ── */
+    #loading-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; gap: 1rem; color: var(--muted); }
+    .spinner { width: 40px; height: 40px; border: 3px solid #1a3366; border-top-color: var(--blue); border-radius: 50%; animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
 
-    .feature-preview {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 1rem;
-      margin-top: 2.5rem;
+    /* ── APP SHELL ── */
+    #app-shell { display: none; }
+    .dashboard { max-width: 1400px; margin: 0 auto; padding: 1.25rem 1.5rem 3rem; display: flex; flex-direction: column; gap: 1.25rem; }
+
+    /* ── SECTION WRAPPER ── */
+    .dash-section { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem 1.5rem; }
+    .section-hd { display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 1.1rem; }
+    .section-title { font-size: 0.7rem; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); }
+
+    /* ── CONTROLS (engine top bar) ── */
+    .engine-controls { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+    .ctrl-group { display: flex; flex-direction: column; gap: 0.2rem; }
+    .ctrl-label { font-size: 0.68rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+    select, input[type="number"] { background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 0.4rem 0.65rem; border-radius: 6px; font-size: 0.85rem; font-family: inherit; }
+    select:focus, input:focus { outline: none; border-color: var(--blue); }
+    .loan-wrap { display: flex; align-items: center; gap: 0; }
+    .loan-prefix { background: var(--bg); border: 1px solid var(--border); border-right: none; padding: 0.4rem 0.5rem; border-radius: 6px 0 0 6px; color: var(--muted); font-size: 0.85rem; }
+    .loan-wrap input { border-radius: 0 6px 6px 0; width: 115px; }
+    .quality-badge { font-size: 0.68rem; font-weight: 700; letter-spacing: 0.5px; padding: 0.25rem 0.6rem; border-radius: 4px; text-transform: uppercase; }
+    .quality-ok { background: rgba(34,197,94,0.15); color: var(--green); border: 1px solid rgba(34,197,94,0.3); }
+    .quality-warn { background: rgba(245,158,11,0.15); color: var(--yellow); border: 1px solid rgba(245,158,11,0.3); }
+    .quality-err { background: rgba(239,68,68,0.15); color: var(--red); border: 1px solid rgba(239,68,68,0.3); }
+
+    /* ── PRICING CARDS ── */
+    .pricing-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+    .pricing-card { background: var(--card-alt); border: 1px solid var(--border); border-radius: 10px; padding: 1.25rem 1.5rem; display: flex; flex-direction: column; gap: 0.5rem; }
+    .card-product { font-size: 0.68rem; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); }
+    .card-pts { font-size: 2.6rem; font-weight: 800; line-height: 1; letter-spacing: -1px; }
+    .card-pts.positive { color: var(--green); }
+    .card-pts.negative { color: var(--red); }
+    .card-pts.neutral  { color: var(--muted); }
+    .card-pts-label { font-size: 0.72rem; color: var(--muted); }
+    .card-dollars { font-size: 1.1rem; font-weight: 600; margin-top: 0.15rem; }
+    .card-dollars.positive { color: var(--green); }
+    .card-dollars.negative { color: var(--red); }
+    .card-dollars.neutral  { color: var(--muted); }
+    .card-per100k { font-size: 0.72rem; color: var(--muted); }
+    .signal-badge { display: inline-flex; align-items: center; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.5px; padding: 0.2rem 0.55rem; border-radius: 4px; width: fit-content; margin-top: 0.25rem; }
+    .signal-better { background: rgba(34,197,94,0.15); color: var(--green); border: 1px solid rgba(34,197,94,0.3); }
+    .signal-worse  { background: rgba(239,68,68,0.15);  color: var(--red);   border: 1px solid rgba(239,68,68,0.3); }
+    .signal-flat   { background: rgba(139,153,180,0.15); color: var(--muted); border: 1px solid rgba(139,153,180,0.3); }
+
+    /* ── CHART ── */
+    .chart-wrap { position: relative; height: 240px; }
+
+    /* ── MARKET TILES ── */
+    .market-tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+    .market-tile { background: var(--card-alt); border: 1px solid var(--border); border-radius: 10px; padding: 1rem 1.25rem; }
+    .tile-label { font-size: 0.68rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-bottom: 0.5rem; }
+    .tile-value { font-size: 1.6rem; font-weight: 700; letter-spacing: -0.5px; }
+    .tile-change { font-size: 0.82rem; font-weight: 600; margin-top: 0.2rem; }
+    .pos { color: var(--green); }
+    .neg { color: var(--red); }
+    .neu { color: var(--muted); }
+
+    /* ── TWO COLUMN LAYOUT ── */
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
+
+    /* ── RATE TABLES ── */
+    .rate-panel-title { font-size: 0.72rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.75rem; }
+    .rate-table { width: 100%; border-collapse: collapse; }
+    .rate-table th { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); text-align: left; padding: 0.3rem 0; border-bottom: 1px solid var(--border); }
+    .rate-table td { font-size: 0.88rem; padding: 0.45rem 0; border-bottom: 1px solid rgba(26,51,102,0.5); }
+    .rate-table td:last-child { text-align: right; }
+    .rate-table .product-cell { color: var(--muted); font-size: 0.8rem; }
+    .as-of-note { font-size: 0.68rem; color: var(--muted); margin-top: 0.6rem; }
+    .two-panels { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+
+    /* ── FED SNAPSHOT ── */
+    .fed-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .fed-item { background: var(--card-alt); border: 1px solid var(--border); border-radius: 8px; padding: 0.85rem 1rem; }
+    .fed-label { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); margin-bottom: 0.3rem; }
+    .fed-value { font-size: 1.4rem; font-weight: 700; }
+
+    /* ── ECON CALENDAR ── */
+    .cal-tabs { display: flex; gap: 0.25rem; margin-bottom: 1rem; }
+    .cal-tab { background: transparent; border: 1px solid var(--border); color: var(--muted); padding: 0.35rem 0.85rem; border-radius: 6px; font-size: 0.78rem; cursor: pointer; font-family: inherit; }
+    .cal-tab.active { background: var(--blue); border-color: var(--blue); color: #fff; }
+    .cal-table { width: 100%; border-collapse: collapse; }
+    .cal-table th { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); text-align: left; padding: 0.3rem 0.5rem; border-bottom: 1px solid var(--border); }
+    .cal-table td { font-size: 0.82rem; padding: 0.5rem 0.5rem; border-bottom: 1px solid rgba(26,51,102,0.4); vertical-align: middle; }
+    .impact-high   { display: inline-block; background: rgba(239,68,68,0.15); color: var(--red); border: 1px solid rgba(239,68,68,0.3); font-size: 0.65rem; font-weight: 700; letter-spacing: 0.5px; padding: 0.15rem 0.45rem; border-radius: 4px; text-transform: uppercase; }
+    .impact-medium { display: inline-block; background: rgba(245,158,11,0.15); color: var(--yellow); border: 1px solid rgba(245,158,11,0.3); font-size: 0.65rem; font-weight: 700; letter-spacing: 0.5px; padding: 0.15rem 0.45rem; border-radius: 4px; text-transform: uppercase; }
+    .cal-empty { color: var(--muted); font-size: 0.85rem; padding: 1rem 0.5rem; }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 900px) {
+      .pricing-cards { grid-template-columns: 1fr; }
+      .market-tiles  { grid-template-columns: 1fr; }
+      .two-col       { grid-template-columns: 1fr; }
+      .two-panels    { grid-template-columns: 1fr; }
+      .fed-grid      { grid-template-columns: 1fr 1fr; }
     }
-    .preview-card {
-      background: #fff;
-      border-radius: 12px;
-      padding: 1.5rem;
-      box-shadow: 0 2px 12px rgba(0,0,0,0.06);
-      opacity: 0.55;
+    @media (max-width: 600px) {
+      .engine-controls { flex-direction: column; align-items: flex-start; }
+      .nav-meta { display: none; }
     }
-    .preview-card .icon { font-size: 1.6rem; margin-bottom: 0.5rem; }
-    .preview-card h3 { font-size: 0.95rem; color: var(--navy); }
-    .preview-card p { font-size: 0.8rem; color: var(--muted); margin-top: 0.3rem; }
   </style>
 </head>
 <body>
 
-  <!-- Loading state -->
-  <div id="loading-screen">
-    <div class="spinner"></div>
-    <span>Loading your dashboard&hellip;</span>
-  </div>
+<!-- ── LOADING ── -->
+<div id="loading-screen">
+  <div class="spinner"></div>
+  <span>Loading dashboard&hellip;</span>
+</div>
 
-  <!-- Error state (shown if something goes wrong) -->
-  <div id="error-screen">
-    <h2>Something went wrong</h2>
-    <p id="error-msg">We couldn't load your dashboard. Please try again.</p>
-    <a href="/" class="btn btn-primary">Back to Home</a>
-  </div>
+<!-- ── APP SHELL ── -->
+<div id="app-shell">
 
-  <!-- App shell (shown after auth check passes) -->
-  <div id="app-shell">
-    <nav>
-      <div class="logo">Lock<span>IQ</span> Rates</div>
-      <div class="nav-right">
-        <span class="user-email" id="user-email"></span>
-        <button id="sign-out-btn">Sign out</button>
+  <!-- NAV -->
+  <nav>
+    <div class="logo">Lock<span>IQ</span> Rates</div>
+    <div class="nav-right">
+      <div class="nav-meta">
+        <span id="refresh-indicator"></span>
+        <span id="last-updated">—</span>
       </div>
-    </nav>
+      <span id="user-email"></span>
+      <button id="sign-out-btn">Sign out</button>
+    </div>
+  </nav>
 
-    <main>
-      <div class="coming-soon-badge">Coming Soon</div>
-      <h1>Dashboard coming soon</h1>
-      <p>Your market intelligence dashboard is under construction. You'll get real-time MBS data, shadow bond spreads, and broker rates right here.</p>
+  <div class="dashboard">
 
-      <div class="feature-preview">
-        <div class="preview-card">
-          <div class="icon">📈</div>
-          <h3>Live MBS Pricing</h3>
-          <p>Real-time coupon stream</p>
+    <!-- ── SECTION 1: LOCKIQ PRICING ENGINE ── -->
+    <div class="dash-section" id="section-engine">
+      <div class="section-hd">
+        <div style="display:flex;align-items:center;gap:.75rem;">
+          <span class="section-title">LockIQ Pricing Engine</span>
+          <span id="quality-badge" class="quality-badge"></span>
         </div>
-        <div class="preview-card">
-          <div class="icon">🔗</div>
-          <h3>Shadow Bonds</h3>
-          <p>Spread analysis</p>
-        </div>
-        <div class="preview-card">
-          <div class="icon">💹</div>
-          <h3>10-Year Treasury</h3>
-          <p>Live yield tracker</p>
-        </div>
-        <div class="preview-card">
-          <div class="icon">🏦</div>
-          <h3>Broker Rates</h3>
-          <p>Multi-lender comparison</p>
+        <div class="engine-controls">
+          <div class="ctrl-group">
+            <span class="ctrl-label">Compare vs</span>
+            <select id="anchor-select"><option value="">— loading —</option></select>
+          </div>
+          <div class="ctrl-group">
+            <span class="ctrl-label">Loan Amount</span>
+            <div class="loan-wrap">
+              <span class="loan-prefix">$</span>
+              <input type="number" id="loan-amount" value="400000" step="10000" min="50000" max="5000000" />
+            </div>
+          </div>
         </div>
       </div>
-    </main>
-  </div>
+      <div class="pricing-cards" id="pricing-cards">
+        <!-- rendered by JS -->
+      </div>
+    </div>
 
-  <!-- Clerk JS -->
-  <script src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js" type="text/javascript"></script>
+    <!-- ── SECTION 2: CHART ── -->
+    <div class="dash-section" id="section-chart">
+      <div class="section-hd">
+        <span class="section-title">LockIQ Pricing Index — Intraday</span>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="lockiq-chart-canvas"></canvas>
+      </div>
+    </div>
 
-  <script>
-    (async () => {
-      const loading  = document.getElementById('loading-screen');
-      const appShell = document.getElementById('app-shell');
+    <!-- ── SECTION 3: MARKET PROXY ── -->
+    <div class="dash-section" id="section-market">
+      <div class="section-hd">
+        <span class="section-title">Live Market Proxy Indicators</span>
+      </div>
+      <div class="market-tiles" id="market-tiles">
+        <!-- rendered by JS -->
+      </div>
+    </div>
 
-      function showDashboard(email) {
-        loading.style.display  = 'none';
-        appShell.style.display = 'block';
-        document.getElementById('user-email').textContent = email || '';
+    <!-- ── SECTIONS 4 + 5 side by side ── -->
+    <div class="two-col">
+
+      <!-- SECTION 4: BROKER RATES -->
+      <div class="dash-section" id="section-rates">
+        <div class="section-hd" style="margin-bottom:.75rem;">
+          <span class="section-title">Broker Rates</span>
+        </div>
+        <div class="two-panels" id="broker-panels">
+          <!-- rendered by JS -->
+        </div>
+      </div>
+
+      <!-- SECTION 5: FED SNAPSHOT -->
+      <div class="dash-section" id="section-fed">
+        <div class="section-hd" style="margin-bottom:.75rem;">
+          <span class="section-title">Fed Snapshot</span>
+        </div>
+        <div class="fed-grid" id="fed-grid">
+          <!-- rendered by JS -->
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ── SECTION 6: ECONOMIC CALENDAR ── -->
+    <div class="dash-section" id="section-calendar">
+      <div class="section-hd" style="margin-bottom:.75rem;">
+        <span class="section-title">Economic Calendar</span>
+        <div class="cal-tabs" id="cal-tabs">
+          <button class="cal-tab active" data-tab="today">Today</button>
+          <button class="cal-tab" data-tab="tomorrow">Tomorrow</button>
+          <button class="cal-tab" data-tab="week">This Week</button>
+          <button class="cal-tab" data-tab="next">Next Week</button>
+        </div>
+      </div>
+      <div id="cal-content"><!-- rendered by JS --></div>
+    </div>
+
+  </div><!-- /.dashboard -->
+</div><!-- /#app-shell -->
+
+<!-- Clerk JS -->
+<script src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js"></script>
+
+<script>
+// ════════════════════════════════════════════════════════════════════════════
+// DASHBOARD STATE
+// ════════════════════════════════════════════════════════════════════════════
+const state = {
+  index:   null,   // getLockIQIndex response
+  chart:   null,   // getLockIQChart response
+  market:  null,   // getMarketData response
+  anchorKey: null, // currently selected anchor
+  loanAmount: 400000,
+  calTab: 'today',
+};
+let chartInstance = null;
+let refreshTimer  = null;
+
+// ════════════════════════════════════════════════════════════════════════════
+// HELPERS
+// ════════════════════════════════════════════════════════════════════════════
+const $ = id => document.getElementById(id);
+const num = v => { const n = parseFloat(v); return isFinite(n) ? n : null; };
+const fmt  = (n, dec=2) => n == null ? '—' : n.toFixed(dec);
+const fmtRate = n => n == null ? '—' : n.toFixed(3) + '%';
+const sign = n => n == null ? '' : n > 0 ? '+' : '';
+
+function dirClass(n, invertColors) {
+  if (n == null) return 'neu';
+  if (invertColors) return n > 0 ? 'neg' : n < 0 ? 'pos' : 'neu';
+  return n > 0 ? 'pos' : n < 0 ? 'neg' : 'neu';
+}
+
+// ── Date utilities ────────────────────────────────────────────────────────
+function etDateString(offsetDays = 0) {
+  // Approximates Eastern Time (UTC-4 during DST, UTC-5 standard)
+  const now = new Date();
+  const etOffset = -5 * 60; // conservative; close enough for calendar filtering
+  const et = new Date(now.getTime() + (now.getTimezoneOffset() + etOffset) * 60000);
+  et.setDate(et.getDate() + offsetDays);
+  return et.toISOString().slice(0, 10);
+}
+
+function getWeekRange(weekOffset = 0) {
+  const now = new Date();
+  const etOffset = -5 * 60;
+  const et = new Date(now.getTime() + (now.getTimezoneOffset() + etOffset) * 60000);
+  const day = et.getDay(); // 0=Sun
+  const monday = new Date(et); monday.setDate(et.getDate() - (day === 0 ? 6 : day - 1) + weekOffset * 7);
+  const friday = new Date(monday); friday.setDate(monday.getDate() + 4);
+  return { start: monday.toISOString().slice(0, 10), end: friday.toISOString().slice(0, 10) };
+}
+
+function formatTime12(timeStr) {
+  if (!timeStr) return '—';
+  // Handle "HH:MM" or "HH:MM:SS"
+  const parts = timeStr.split(':');
+  if (parts.length < 2) return timeStr;
+  let h = parseInt(parts[0], 10);
+  const m = parts[1].padStart(2, '0');
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  h = h % 12 || 12;
+  return `${h}:${m} ${ampm}`;
+}
+
+// ── FRED value extractor ──────────────────────────────────────────────────
+function fredVal(cache, key) {
+  if (!cache) return null;
+  const keys = [key, key.toLowerCase(), key.toUpperCase()];
+  for (const k of keys) {
+    const v = cache[k];
+    if (v == null) continue;
+    if (typeof v === 'object' && v.latest != null) return num(v.latest);
+    const n = num(v);
+    if (n != null) return n;
+  }
+  return null;
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// DATA FETCHING
+// ════════════════════════════════════════════════════════════════════════════
+async function fetchAll() {
+  $('refresh-indicator').className = 'stale';
+
+  const [indexRes, chartRes, marketRes] = await Promise.allSettled([
+    fetch('/.netlify/functions/getLockIQIndex').then(r => r.ok ? r.json() : null),
+    fetch('/.netlify/functions/getLockIQChart').then(r  => r.ok ? r.json() : null),
+    fetch('/.netlify/functions/getMarketData').then(r  => r.ok ? r.json() : null),
+  ]);
+
+  if (indexRes.status  === 'fulfilled' && indexRes.value)  state.index  = indexRes.value;
+  if (chartRes.status  === 'fulfilled' && chartRes.value)  state.chart  = chartRes.value;
+  if (marketRes.status === 'fulfilled' && marketRes.value) state.market = marketRes.value;
+
+  // Seed default anchor from first available option
+  if (state.index && !state.anchorKey) {
+    const opts = state.index.available_anchor_options;
+    if (Array.isArray(opts) && opts.length > 0) {
+      state.anchorKey = opts[0].anchor_key;
+    }
+  }
+
+  const now = new Date();
+  $('last-updated').textContent = 'Updated ' + now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  $('refresh-indicator').className = '';
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// SECTION 1 — LOCKIQ PRICING ENGINE
+// ════════════════════════════════════════════════════════════════════════════
+function getAnchorData() {
+  const idx = state.index;
+  if (!idx) return null;
+  if (state.anchorKey && idx.anchors && idx.anchors[state.anchorKey]) {
+    return idx.anchors[state.anchorKey];
+  }
+  return idx; // fall back to root
+}
+
+function renderAnchorSelector() {
+  const sel = $('anchor-select');
+  const opts = state.index?.available_anchor_options;
+  if (!Array.isArray(opts) || opts.length === 0) { sel.innerHTML = '<option value="">No anchors</option>'; return; }
+  sel.innerHTML = opts.map(o =>
+    `<option value="${o.anchor_key}"${o.anchor_key === state.anchorKey ? ' selected' : ''}>${o.label || o.anchor_key}</option>`
+  ).join('');
+  sel.onchange = () => { state.anchorKey = sel.value; renderPricingEngine(); };
+}
+
+function renderPricingEngine() {
+  const idx = state.index;
+  if (!idx) { $('pricing-cards').innerHTML = '<p style="color:var(--muted);font-size:.85rem;">Data unavailable</p>'; return; }
+
+  // Quality badge
+  const qb = $('quality-badge');
+  const dq = idx.data_quality || (getAnchorData()?.data_quality);
+  if (dq) {
+    const isOk = /good|ok|live/i.test(dq);
+    const isWarn = /partial|stale|warn/i.test(dq);
+    qb.textContent = dq;
+    qb.className = 'quality-badge ' + (isOk ? 'quality-ok' : isWarn ? 'quality-warn' : 'quality-err');
+  } else {
+    qb.textContent = '';
+  }
+
+  const d = getAnchorData();
+  const loan = state.loanAmount;
+  const mult = loan / 100000;
+
+  const products = [
+    { key: 'conv', label: 'Conventional', pts: num(d?.live_conventional_index_pts ?? idx.live_conventional_index_pts), per100k: num(d?.conv_dollars_per_100k ?? idx.conv_dollars_per_100k), signal: d?.conv_signal ?? idx.conv_signal },
+    { key: 'fha',  label: 'FHA',           pts: num(d?.live_fha_index_pts  ?? idx.live_fha_index_pts),  per100k: num(d?.fha_dollars_per_100k  ?? idx.fha_dollars_per_100k),  signal: d?.fha_signal  ?? idx.fha_signal },
+    { key: 'va',   label: 'VA',            pts: num(d?.live_va_index_pts   ?? idx.live_va_index_pts),   per100k: num(d?.va_dollars_per_100k   ?? idx.va_dollars_per_100k),   signal: d?.va_signal   ?? idx.va_signal },
+  ];
+
+  $('pricing-cards').innerHTML = products.map(p => {
+    const ptsClass = p.pts == null ? 'neutral' : p.pts > 0 ? 'positive' : p.pts < 0 ? 'negative' : 'neutral';
+    const dolTotal = p.per100k != null ? p.per100k * mult : null;
+    const dolClass = dolTotal == null ? 'neutral' : dolTotal > 0 ? 'positive' : dolTotal < 0 ? 'negative' : 'neutral';
+    const sig = (p.signal || '').toUpperCase();
+    const sigClass = sig === 'BETTER' ? 'signal-better' : sig === 'WORSE' ? 'signal-worse' : 'signal-flat';
+    const ptsStr = p.pts != null ? (sign(p.pts) + fmt(p.pts, 1) + ' pts') : '— pts';
+    const dolStr = dolTotal != null ? (sign(dolTotal) + '$' + Math.abs(dolTotal).toLocaleString('en-US', {maximumFractionDigits:0})) : '—';
+    const per100kStr = p.per100k != null ? (sign(p.per100k) + '$' + Math.abs(p.per100k).toLocaleString('en-US', {maximumFractionDigits:0}) + ' / $100k') : '';
+    return `<div class="pricing-card">
+      <div class="card-product">${p.label}</div>
+      <div class="card-pts ${ptsClass}">${ptsStr}</div>
+      <div class="card-pts-label">vs selected anchor</div>
+      <div class="card-dollars ${dolClass}">${dolStr}</div>
+      <div class="card-per100k">${per100kStr ? 'for $' + loan.toLocaleString() + ' &nbsp;·&nbsp; ' + per100kStr : ''}</div>
+      ${sig ? `<div class="signal-badge ${sigClass}">${sig}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// SECTION 2 — CHART
+// ════════════════════════════════════════════════════════════════════════════
+function renderChart() {
+  const raw = state.chart;
+  const canvas = $('lockiq-chart-canvas');
+
+  if (!raw) {
+    canvas.parentElement.innerHTML = '<p style="color:var(--muted);font-size:.85rem;padding:.5rem 0;">Chart data unavailable</p>';
+    return;
+  }
+
+  // Parse flexible data shapes
+  let labels = [], convPts = [], fhaPts = [], vaPts = [];
+
+  const points = raw.points || raw.data || raw.chart_data?.points;
+  if (Array.isArray(points) && points.length > 0) {
+    labels  = points.map(p => p.time_label || p.time || p.t || '');
+    convPts = points.map(p => num(p.conv_pts ?? p.conv ?? p.conventional));
+    fhaPts  = points.map(p => num(p.fha_pts  ?? p.fha));
+    vaPts   = points.map(p => num(p.va_pts   ?? p.va));
+  } else {
+    const l = raw.labels || raw.times || raw.chart_data?.labels;
+    if (Array.isArray(l)) {
+      labels  = l;
+      convPts = (raw.conv || raw.chart_data?.conv || []).map(num);
+      fhaPts  = (raw.fha  || raw.chart_data?.fha  || []).map(num);
+      vaPts   = (raw.va   || raw.chart_data?.va   || []).map(num);
+    }
+  }
+
+  if (labels.length === 0) {
+    canvas.parentElement.innerHTML = '<p style="color:var(--muted);font-size:.85rem;padding:.5rem 0;">No intraday data yet</p>';
+    return;
+  }
+
+  if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
+
+  chartInstance = new Chart(canvas, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Conventional', data: convPts, borderColor: '#1a56db', backgroundColor: 'transparent', borderWidth: 2, pointRadius: 0, tension: 0.3 },
+        { label: 'FHA',          data: fhaPts,  borderColor: '#f5a623', backgroundColor: 'transparent', borderWidth: 2, pointRadius: 0, tension: 0.3 },
+        { label: 'VA',           data: vaPts,   borderColor: '#22c55e', backgroundColor: 'transparent', borderWidth: 2, pointRadius: 0, tension: 0.3 },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { labels: { color: '#8aaad4', font: { size: 11 }, boxWidth: 20 } },
+        tooltip: {
+          callbacks: {
+            label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y != null ? (ctx.parsed.y > 0 ? '+' : '') + ctx.parsed.y.toFixed(2) + ' pts' : '—'}`,
+          },
+        },
+      },
+      scales: {
+        x: {
+          ticks: { color: '#8aaad4', font: { size: 10 }, maxTicksLimit: 10 },
+          grid:  { color: 'rgba(26,51,102,0.5)' },
+        },
+        y: {
+          ticks: {
+            color: '#8aaad4', font: { size: 10 },
+            callback: v => (v > 0 ? '+' : '') + v.toFixed(1),
+          },
+          grid: { color: 'rgba(26,51,102,0.5)' },
+        },
+      },
+    },
+  });
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// SECTION 3 — MARKET PROXY
+// ════════════════════════════════════════════════════════════════════════════
+function renderMarketProxy() {
+  const sb = state.market?.shadow_bonds;
+  const tiles = [
+    { label: 'ZN Futures',       value: num(sb?.ZN1_Current),        change: num(sb?.ZN1_Daily_Change),        dec: 3, invertChange: false },
+    { label: 'US 10-Year Yield', value: num(sb?.US10Y_Current),      change: num(sb?.US10Y_Daily_Change),      dec: 3, suffix: '%', bps: true, invertChange: true },
+    { label: 'MBB',              value: num(sb?.MBB_Shadow ?? sb?.MBB_Current), change: num(sb?.MBB_Shadow_Daily_Change ?? sb?.MBB_Daily_Change), dec: 2, invertChange: false },
+  ];
+
+  $('market-tiles').innerHTML = tiles.map(t => {
+    const valStr = t.value != null ? fmt(t.value, t.dec) + (t.suffix || '') : '—';
+    let chgStr = '—', chgClass = 'neu';
+    if (t.change != null) {
+      const chgDisplay = t.bps ? (Math.round(t.change * 1000) / 10).toFixed(1) + ' bps' : (sign(t.change) + fmt(Math.abs(t.change), t.dec));
+      chgStr = (t.change > 0 ? '+' : '') + chgDisplay;
+      chgClass = dirClass(t.change, t.invertChange);
+    }
+    return `<div class="market-tile">
+      <div class="tile-label">${t.label}</div>
+      <div class="tile-value">${valStr}</div>
+      <div class="tile-change ${chgClass}">${chgStr} today</div>
+    </div>`;
+  }).join('');
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// SECTION 4 — BROKER RATES
+// ════════════════════════════════════════════════════════════════════════════
+function renderBrokerRates() {
+  const br   = state.market?.broker_rates;
+  const fred = state.market?.fred_cache;
+
+  // Panel 1: Pipeline rates
+  const pipeline = [
+    { label: '30Y Conventional', val: num(br?.conv30) },
+    { label: '30Y FHA',          val: num(br?.fha30)  },
+    { label: '30Y VA',           val: num(br?.va30)   },
+    { label: '30Y Jumbo',        val: num(br?.jumbo30)},
+  ].filter(r => r.val != null);
+
+  const pipelineHtml = pipeline.length
+    ? `<table class="rate-table">
+         <thead><tr><th>Product</th><th style="text-align:right">Rate</th></tr></thead>
+         <tbody>${pipeline.map(r => `<tr><td class="product-cell">${r.label}</td><td>${fmtRate(r.val)}</td></tr>`).join('')}</tbody>
+       </table>
+       ${br?.as_of ? `<p class="as-of-note">As of ${br.as_of}</p>` : ''}`
+    : '<p style="color:var(--muted);font-size:.82rem;">No pipeline rate data</p>';
+
+  // Panel 2: Freddie Mac PMMS
+  const freddie = [
+    { label: '30Y Fixed', val: fredVal(fred, 'MORTGAGE30US') },
+    { label: '15Y Fixed', val: fredVal(fred, 'MORTGAGE15US') },
+  ].filter(r => r.val != null);
+
+  const freddieHtml = freddie.length
+    ? `<table class="rate-table">
+         <thead><tr><th>Product</th><th style="text-align:right">Rate</th></tr></thead>
+         <tbody>${freddie.map(r => `<tr><td class="product-cell">${r.label}</td><td>${fmtRate(r.val)}</td></tr>`).join('')}</tbody>
+       </table>
+       <p class="as-of-note">Freddie Mac PMMS — weekly survey</p>`
+    : '<p style="color:var(--muted);font-size:.82rem;">No Freddie Mac data</p>';
+
+  $('broker-panels').innerHTML = `
+    <div>
+      <div class="rate-panel-title">Pipeline Rates</div>
+      ${pipelineHtml}
+    </div>
+    <div>
+      <div class="rate-panel-title">Freddie Mac PMMS</div>
+      ${freddieHtml}
+    </div>`;
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// SECTION 5 — FED SNAPSHOT
+// ════════════════════════════════════════════════════════════════════════════
+function renderFedSnapshot() {
+  const fred = state.market?.fred_cache;
+  const ffr  = fredVal(fred, 'FEDFUNDS') ?? fredVal(fred, 'fed_funds_rate') ?? fredVal(fred, 'DFEDTARU');
+  const prime = fredVal(fred, 'DPRIME')  ?? fredVal(fred, 'prime_rate')     ?? fredVal(fred, 'PRIME');
+
+  const items = [
+    { label: 'Fed Funds Target', val: ffr   != null ? ffr.toFixed(2)   + '%' : '—' },
+    { label: 'Prime Rate',       val: prime != null ? prime.toFixed(2) + '%' : '—' },
+  ];
+
+  $('fed-grid').innerHTML = items.map(item =>
+    `<div class="fed-item">
+       <div class="fed-label">${item.label}</div>
+       <div class="fed-value">${item.val}</div>
+     </div>`
+  ).join('');
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// SECTION 6 — ECONOMIC CALENDAR
+// ════════════════════════════════════════════════════════════════════════════
+function getCalEvents() {
+  const raw = state.market?.econ_calendar;
+  if (!raw) return [];
+  return raw.events || raw.data || (Array.isArray(raw) ? raw : []);
+}
+
+function impactLevel(event) {
+  const i = event.impact ?? event.impact_level ?? event.level ?? 0;
+  if (typeof i === 'number') return i;
+  const s = String(i).toLowerCase();
+  if (s === 'high'   || s === '3') return 3;
+  if (s === 'medium' || s === '2') return 2;
+  if (s === 'low'    || s === '1') return 1;
+  return 0;
+}
+
+function filterEvents(events, tab) {
+  const today    = etDateString(0);
+  const tomorrow = etDateString(1);
+  const thisWeek = getWeekRange(0);
+  const nextWeek = getWeekRange(1);
+
+  return events
+    .filter(e => impactLevel(e) > 1) // drop low/1
+    .filter(e => {
+      const d = e.date || e.event_date || '';
+      switch (tab) {
+        case 'today':    return d === today;
+        case 'tomorrow': return d === tomorrow;
+        case 'week':     return d >= thisWeek.start && d <= thisWeek.end;
+        case 'next':     return d >= nextWeek.start && d <= nextWeek.end;
+        default:         return true;
       }
+    })
+    .sort((a, b) => (a.date || '').localeCompare(b.date || '') || (a.time || '').localeCompare(b.time || ''));
+}
 
-      // ── 1. Try to load Clerk — fall through to dashboard on any failure ─
-      let clerk = null;
-      try {
-        const res = await fetch('/.netlify/functions/getConfig');
-        if (res.ok) {
-          const { clerkPublishableKey } = await res.json();
-          if (window.Clerk && clerkPublishableKey) {
-            await window.Clerk.load({ publishableKey: clerkPublishableKey });
-            clerk = window.Clerk;
-          }
-        }
-      } catch {
-        // Clerk unavailable — proceed without auth gating
+function renderEconCalendar() {
+  const events = filterEvents(getCalEvents(), state.calTab);
+
+  let html;
+  if (events.length === 0) {
+    html = `<p class="cal-empty">No medium or high-impact events for this period.</p>`;
+  } else {
+    const showDate = (state.calTab === 'week' || state.calTab === 'next');
+    html = `<table class="cal-table">
+      <thead><tr>${showDate ? '<th>Date</th>' : ''}<th>Time (ET)</th><th>Event</th><th>Impact</th></tr></thead>
+      <tbody>${events.map(e => {
+        const impact = impactLevel(e);
+        const badge  = impact >= 3
+          ? '<span class="impact-high">HIGH</span>'
+          : '<span class="impact-medium">MED</span>';
+        const dateCell = showDate ? `<td style="color:var(--muted)">${e.date || ''}</td>` : '';
+        const timeStr  = e.time || e.release_time || e.time_et || '';
+        const name     = e.event || e.name || e.title || e.description || 'Unknown';
+        return `<tr>${dateCell}<td style="color:var(--muted);white-space:nowrap">${formatTime12(timeStr)}</td><td>${name}</td><td>${badge}</td></tr>`;
+      }).join('')}</tbody>
+    </table>`;
+  }
+  $('cal-content').innerHTML = html;
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// RENDER ALL
+// ════════════════════════════════════════════════════════════════════════════
+function renderAll() {
+  renderAnchorSelector();
+  renderPricingEngine();
+  renderChart();
+  renderMarketProxy();
+  renderBrokerRates();
+  renderFedSnapshot();
+  renderEconCalendar();
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// INIT
+// ════════════════════════════════════════════════════════════════════════════
+async function initDashboard() {
+  // Loan amount live recalculation (no refetch needed)
+  $('loan-amount').addEventListener('input', e => {
+    const v = parseInt(e.target.value, 10);
+    if (v > 0) { state.loanAmount = v; renderPricingEngine(); }
+  });
+
+  // Calendar tabs
+  document.querySelectorAll('.cal-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.cal-tab').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      state.calTab = btn.dataset.tab;
+      renderEconCalendar();
+    });
+  });
+
+  // Initial load
+  await fetchAll();
+  renderAll();
+
+  // Auto-refresh every 60 seconds
+  refreshTimer = setInterval(async () => {
+    await fetchAll();
+    renderAll();
+  }, 60000);
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// CLERK AUTH GATE (preserved from previous version)
+// ════════════════════════════════════════════════════════════════════════════
+(async () => {
+  const loading  = $('loading-screen');
+  const appShell = $('app-shell');
+  const params   = new URLSearchParams(window.location.search);
+
+  function showApp(email) {
+    loading.style.display  = 'none';
+    appShell.style.display = 'block';
+    $('user-email').textContent = email || '';
+    initDashboard();
+  }
+
+  async function goToCheckout(token) {
+    const res = await fetch('/.netlify/functions/createCheckoutSession', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
+    if (!res.ok) throw new Error('createCheckoutSession failed');
+    const { url } = await res.json();
+    window.location.href = url;
+  }
+
+  // Try Clerk
+  let clerk = null;
+  try {
+    const res = await fetch('/.netlify/functions/getConfig');
+    if (res.ok) {
+      const { clerkPublishableKey } = await res.json();
+      if (window.Clerk && clerkPublishableKey) {
+        await window.Clerk.load({ publishableKey: clerkPublishableKey });
+        clerk = window.Clerk;
       }
+    }
+  } catch { /* Clerk unavailable */ }
 
-      // ── 2. If Clerk loaded, apply auth logic ───────────────────────────
-      if (clerk) {
-        // Not signed in → back to home
-        if (!clerk.user) {
-          window.location.href = '/';
-          return;
-        }
+  // No Clerk → show dashboard ungated (dev mode)
+  if (!clerk) {
+    showApp('');
+    $('sign-out-btn').style.display = 'none';
+    return;
+  }
 
-        // Post-signup: needs Stripe checkout
-        const params = new URLSearchParams(window.location.search);
-        if (params.get('checkout') === '1') {
-          history.replaceState(null, '', '/app.html');
-          try {
-            const token = await clerk.session.getToken();
-            const res = await fetch('/.netlify/functions/createCheckoutSession', {
-              method: 'POST',
-              headers: { 'Authorization': `Bearer ${token}` },
-            });
-            if (!res.ok) throw new Error();
-            const { url } = await res.json();
-            window.location.href = url;
-          } catch {
-            // Checkout failed — still show the dashboard rather than blocking
-            console.error('Checkout session failed; showing dashboard anyway.');
-            showDashboard(clerk.user.primaryEmailAddress?.emailAddress);
-            document.getElementById('sign-out-btn').addEventListener('click', async () => {
-              await clerk.signOut();
-              window.location.href = '/';
-            });
-          }
-          return;
-        }
+  // Must be signed in
+  if (!clerk.user) { window.location.href = '/'; return; }
 
-        // Normal authenticated visit
-        showDashboard(clerk.user.primaryEmailAddress?.emailAddress);
-        document.getElementById('sign-out-btn').addEventListener('click', async () => {
-          await clerk.signOut();
-          window.location.href = '/';
-        });
-        return;
-      }
+  const email = clerk.user.primaryEmailAddress?.emailAddress || '';
+  const token = await clerk.session.getToken();
 
-      // ── 3. Clerk unavailable — show dashboard without auth gating ─────
-      // TODO: re-enable gating once Clerk is fully configured.
-      showDashboard('');
-      document.getElementById('sign-out-btn').style.display = 'none';
-    })();
-  </script>
+  $('sign-out-btn').addEventListener('click', async () => {
+    await clerk.signOut();
+    window.location.href = '/';
+  });
+
+  // New signup → Stripe
+  if (params.get('checkout') === '1') {
+    history.replaceState(null, '', '/app.html');
+    try { await goToCheckout(token); } catch { showApp(email); }
+    return;
+  }
+
+  // Returning from Stripe → show optimistically
+  if (params.get('checkout') === 'complete') {
+    history.replaceState(null, '', '/app.html');
+    showApp(email);
+    return;
+  }
+
+  // Normal visit → check subscription
+  try {
+    const res = await fetch('/.netlify/functions/checkSubscription', {
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
+    if (!res.ok) throw new Error();
+    const { status } = await res.json();
+    if (status === 'active') {
+      showApp(email);
+    } else {
+      await goToCheckout(token);
+    }
+  } catch {
+    showApp(email); // subscription check error → show rather than block
+  }
+})();
+</script>
 </body>
 </html>

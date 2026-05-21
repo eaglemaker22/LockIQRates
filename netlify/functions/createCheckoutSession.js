@@ -58,6 +58,8 @@ exports.handler = async (event) => {
       payment_method_types: ["card"],
       // Card is always collected even during trial
       payment_method_collection: "always",
+      // client_reference_id is how the webhook identifies the Clerk user
+      client_reference_id: userId,
       line_items: [
         {
           price: process.env.STRIPE_PRICE_ID,
@@ -68,7 +70,8 @@ exports.handler = async (event) => {
         trial_period_days: 7,
         metadata: { clerk_user_id: userId },
       },
-      success_url: `${origin}/app.html`,
+      // ?checkout=complete tells app.html the user just finished Stripe
+      success_url: `${origin}/app.html?checkout=complete`,
       cancel_url: `${origin}/`,
       metadata: { clerk_user_id: userId },
     });

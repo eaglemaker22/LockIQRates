@@ -6,6 +6,15 @@
 [build.environment]
   NODE_VERSION = "18"
 
+# Expose the Stripe webhook at a clean URL.
+# Set https://lockiqrates.com/stripe-webhook as the endpoint in Stripe dashboard.
+# Netlify passes the raw request body in event.body (string), which is what
+# stripe.webhooks.constructEvent requires — no additional middleware needed.
+[[redirects]]
+  from = "/stripe-webhook"
+  to = "/.netlify/functions/stripeWebhook"
+  status = 200
+
 [[headers]]
   for = "/*"
   [headers.values]

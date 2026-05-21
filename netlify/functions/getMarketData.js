@@ -38,12 +38,14 @@ exports.handler = async (event) => {
     const db = getDb();
     const marketDataRef = db.collection("market_data");
 
-    // Fetch all four documents in parallel
-    const [shadowBonds, mbsProducts, us10y, brokerRates] = await Promise.all([
+    // Fetch all documents in parallel
+    const [shadowBonds, mbsProducts, us10y, brokerRates, fredCache, econCalendar] = await Promise.all([
       marketDataRef.doc("shadow_bonds").get(),
       marketDataRef.doc("mbs_products").get(),
       marketDataRef.doc("us10y_current").get(),
       marketDataRef.doc("broker_rates").get(),
+      marketDataRef.doc("fred_cache").get(),
+      marketDataRef.doc("econ_calendar").get(),
     ]);
 
     const payload = {
@@ -51,6 +53,8 @@ exports.handler = async (event) => {
       mbs_products: mbsProducts.exists ? mbsProducts.data() : null,
       us10y_current: us10y.exists ? us10y.data() : null,
       broker_rates: brokerRates.exists ? brokerRates.data() : null,
+      fred_cache: fredCache.exists ? fredCache.data() : null,
+      econ_calendar: econCalendar.exists ? econCalendar.data() : null,
       fetched_at: new Date().toISOString(),
     };
 
