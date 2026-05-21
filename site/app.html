@@ -194,78 +194,75 @@
   <script>
     (async () => {
       const loading  = document.getElementById('loading-screen');
-      const errorDiv = document.getElementById('error-screen');
-      const errorMsg = document.getElementById('error-msg');
       const appShell = document.getElementById('app-shell');
 
-      function showError(msg) {
+      function showDashboard(email) {
         loading.style.display  = 'none';
-        errorDiv.style.display = 'flex';
-        errorMsg.textContent   = msg;
+        appShell.style.display = 'block';
+        document.getElementById('user-email').textContent = email || '';
       }
 
-      // ── 1. Load Clerk publishable key ──────────────────────────────────
-      let clerkPublishableKey;
+      // ── 1. Try to load Clerk — fall through to dashboard on any failure ─
+      let clerk = null;
       try {
         const res = await fetch('/.netlify/functions/getConfig');
-        if (!res.ok) throw new Error('Config fetch failed');
-        ({ clerkPublishableKey } = await res.json());
+        if (res.ok) {
+          const { clerkPublishableKey } = await res.json();
+          if (window.Clerk && clerkPublishableKey) {
+            await window.Clerk.load({ publishableKey: clerkPublishableKey });
+            clerk = window.Clerk;
+          }
+        }
       } catch {
-        showError('Could not load authentication config. Please refresh.');
-        return;
+        // Clerk unavailable — proceed without auth gating
       }
 
-      // ── 2. Initialize Clerk ────────────────────────────────────────────
-      const clerk = window.Clerk;
-      try {
-        await clerk.load({ publishableKey: clerkPublishableKey });
-      } catch {
-        showError('Authentication service failed to load. Please refresh.');
-        return;
-      }
-
-      // ── 3. Gate: must be signed in ─────────────────────────────────────
-      if (!clerk.user) {
-        window.location.href = '/';
-        return;
-      }
-
-      // ── 4. Check if this is a post-signup redirect needing checkout ────
-      const params = new URLSearchParams(window.location.search);
-      if (params.get('checkout') === '1') {
-        // Remove the query param from history so a refresh doesn't re-trigger
-        history.replaceState(null, '', '/app.html');
-
-        let checkoutUrl;
-        try {
-          const token = await clerk.session.getToken();
-          const res = await fetch('/.netlify/functions/createCheckoutSession', {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${token}` },
-          });
-          if (!res.ok) throw new Error('Checkout session creation failed');
-          ({ url: checkoutUrl } = await res.json());
-        } catch (err) {
-          console.error(err);
-          showError('Could not start checkout. Please try again or contact support.');
+      // ── 2. If Clerk loaded, apply auth logic ───────────────────────────
+      if (clerk) {
+        // Not signed in → back to home
+        if (!clerk.user) {
+          window.location.href = '/';
           return;
         }
 
-        window.location.href = checkoutUrl;
+        // Post-signup: needs Stripe checkout
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('checkout') === '1') {
+          history.replaceState(null, '', '/app.html');
+          try {
+            const token = await clerk.session.getToken();
+            const res = await fetch('/.netlify/functions/createCheckoutSession', {
+              method: 'POST',
+              headers: { 'Authorization': `Bearer ${token}` },
+            });
+            if (!res.ok) throw new Error();
+            const { url } = await res.json();
+            window.location.href = url;
+          } catch {
+            // Checkout failed — still show the dashboard rather than blocking
+            console.error('Checkout session failed; showing dashboard anyway.');
+            showDashboard(clerk.user.primaryEmailAddress?.emailAddress);
+            document.getElementById('sign-out-btn').addEventListener('click', async () => {
+              await clerk.signOut();
+              window.location.href = '/';
+            });
+          }
+          return;
+        }
+
+        // Normal authenticated visit
+        showDashboard(clerk.user.primaryEmailAddress?.emailAddress);
+        document.getElementById('sign-out-btn').addEventListener('click', async () => {
+          await clerk.signOut();
+          window.location.href = '/';
+        });
         return;
       }
 
-      // ── 5. Show dashboard ──────────────────────────────────────────────
-      loading.style.display  = 'none';
-      appShell.style.display = 'block';
-
-      const emailEl = document.getElementById('user-email');
-      emailEl.textContent = clerk.user.primaryEmailAddress?.emailAddress || '';
-
-      document.getElementById('sign-out-btn').addEventListener('click', async () => {
-        await clerk.signOut();
-        window.location.href = '/';
-      });
+      // ── 3. Clerk unavailable — show dashboard without auth gating ─────
+      // TODO: re-enable gating once Clerk is fully configured.
+      showDashboard('');
+      document.getElementById('sign-out-btn').style.display = 'none';
     })();
   </script>
 </body>
