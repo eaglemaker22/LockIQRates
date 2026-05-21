@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LockIQ Rates — Mortgage Market Intelligence</title>
+  <meta name="description" content="Real-time MBS pricing, shadow bond analysis, and broker rate intelligence for mortgage loan officers." />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --navy: #0f1f3d;
+      --blue: #1a56db;
+      --gold: #f5a623;
+      --light: #f4f6fb;
+      --text: #1e2a3a;
+      --muted: #6b7a90;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--light);
+      color: var(--text);
+    }
+
+    /* NAV */
+    nav {
+      background: var(--navy);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 2rem;
+      height: 60px;
+    }
+    .logo {
+      color: #fff;
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+    .logo span { color: var(--gold); }
+    .nav-cta {
+      background: var(--gold);
+      color: var(--navy);
+      font-weight: 700;
+      padding: 0.5rem 1.25rem;
+      border-radius: 6px;
+      text-decoration: none;
+      font-size: 0.9rem;
+    }
+
+    /* HERO */
+    .hero {
+      background: linear-gradient(135deg, var(--navy) 60%, #1a3566);
+      color: #fff;
+      text-align: center;
+      padding: 5rem 1.5rem 4rem;
+    }
+    .hero h1 {
+      font-size: clamp(2rem, 5vw, 3.5rem);
+      font-weight: 800;
+      line-height: 1.15;
+      max-width: 780px;
+      margin: 0 auto 1.25rem;
+    }
+    .hero h1 em {
+      font-style: normal;
+      color: var(--gold);
+    }
+    .hero p {
+      font-size: 1.15rem;
+      color: #bdd0f0;
+      max-width: 560px;
+      margin: 0 auto 2.25rem;
+      line-height: 1.6;
+    }
+    .hero-actions { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+    .btn-primary {
+      background: var(--gold);
+      color: var(--navy);
+      font-weight: 700;
+      padding: 0.85rem 2rem;
+      border-radius: 8px;
+      text-decoration: none;
+      font-size: 1rem;
+    }
+    .btn-secondary {
+      background: transparent;
+      color: #fff;
+      font-weight: 600;
+      padding: 0.85rem 2rem;
+      border-radius: 8px;
+      text-decoration: none;
+      font-size: 1rem;
+      border: 2px solid rgba(255,255,255,0.35);
+    }
+    .trial-note {
+      margin-top: 1rem;
+      font-size: 0.82rem;
+      color: #8aaad4;
+    }
+
+    /* FEATURES */
+    .features {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 1.5rem;
+      max-width: 1100px;
+      margin: -2.5rem auto 0;
+      padding: 0 1.5rem 3rem;
+    }
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 1.75rem;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.07);
+    }
+    .card-icon {
+      font-size: 1.8rem;
+      margin-bottom: 0.75rem;
+    }
+    .card h3 { font-size: 1.05rem; margin-bottom: 0.5rem; color: var(--navy); }
+    .card p { font-size: 0.9rem; color: var(--muted); line-height: 1.55; }
+
+    /* PRICING */
+    .pricing {
+      background: var(--navy);
+      color: #fff;
+      text-align: center;
+      padding: 4rem 1.5rem;
+    }
+    .pricing h2 { font-size: 2rem; margin-bottom: 0.5rem; }
+    .pricing .sub { color: #8aaad4; margin-bottom: 2.5rem; }
+    .price-card {
+      background: #fff;
+      color: var(--text);
+      border-radius: 14px;
+      padding: 2.5rem 2rem;
+      max-width: 380px;
+      margin: 0 auto;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+    }
+    .price-amount {
+      font-size: 3rem;
+      font-weight: 800;
+      color: var(--navy);
+    }
+    .price-amount sup { font-size: 1.25rem; vertical-align: super; }
+    .price-amount sub { font-size: 1rem; color: var(--muted); font-weight: 400; }
+    .price-features {
+      list-style: none;
+      text-align: left;
+      margin: 1.5rem 0 2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+    .price-features li { font-size: 0.92rem; }
+    .price-features li::before { content: "✓  "; color: var(--blue); font-weight: 700; }
+    .btn-pricing {
+      display: block;
+      background: var(--blue);
+      color: #fff;
+      font-weight: 700;
+      padding: 0.9rem;
+      border-radius: 8px;
+      text-decoration: none;
+      font-size: 1rem;
+    }
+    .price-footnote { margin-top: 1rem; font-size: 0.8rem; color: var(--muted); }
+
+    /* FOOTER */
+    footer {
+      text-align: center;
+      padding: 2rem;
+      font-size: 0.82rem;
+      color: var(--muted);
+      border-top: 1px solid #e2e8f0;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav>
+    <div class="logo">Lock<span>IQ</span> Rates</div>
+    <a class="nav-cta" href="/sign-up">Start Free Trial</a>
+  </nav>
+
+  <!-- HERO -->
+  <section class="hero">
+    <h1>Mortgage Market Intelligence <em>Built for Loan Officers</em></h1>
+    <p>Real-time MBS pricing, shadow bond analysis, and live broker rates — everything you need to lock with confidence.</p>
+    <div class="hero-actions">
+      <a class="btn-primary" href="/sign-up">Start Your 7-Day Free Trial</a>
+      <a class="btn-secondary" href="#features">See How It Works</a>
+    </div>
+    <p class="trial-note">No commitment during trial &middot; Card required &middot; Cancel anytime</p>
+  </section>
+
+  <!-- FEATURE CARDS -->
+  <div class="features" id="features">
+    <div class="card">
+      <div class="card-icon">📈</div>
+      <h3>Live MBS Pricing</h3>
+      <p>Stream real-time mortgage-backed security coupons so you know exactly where the market is — before your competition does.</p>
+    </div>
+    <div class="card">
+      <div class="card-icon">🔗</div>
+      <h3>Shadow Bond Analysis</h3>
+      <p>Track shadow bond spreads to anticipate rate movements and advise clients with data, not guesswork.</p>
+    </div>
+    <div class="card">
+      <div class="card-icon">💹</div>
+      <h3>US 10-Year Tracker</h3>
+      <p>Monitor the 10-year Treasury yield in real time — the benchmark that drives every lock decision you make.</p>
+    </div>
+    <div class="card">
+      <div class="card-icon">🏦</div>
+      <h3>Broker Rate Intelligence</h3>
+      <p>Compare live broker rate sheets across lenders so you can always show clients the best available pricing.</p>
+    </div>
+  </div>
+
+  <!-- PRICING -->
+  <section class="pricing">
+    <h2>Simple, Transparent Pricing</h2>
+    <p class="sub">One plan. Everything included. Cancel anytime.</p>
+    <div class="price-card">
+      <div class="price-amount"><sup>$</sup>8<sup>.99</sup><sub>/mo</sub></div>
+      <ul class="price-features">
+        <li>Real-time MBS coupon stream</li>
+        <li>Shadow bond spread tracker</li>
+        <li>US 10-Year Treasury live feed</li>
+        <li>Broker rate comparisons</li>
+        <li>Daily market summary digest</li>
+        <li>7-day free trial included</li>
+      </ul>
+      <a class="btn-pricing" href="/sign-up">Get Started — Free for 7 Days</a>
+      <p class="price-footnote">$8.99/mo after trial &middot; Card required at signup</p>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    &copy; <span id="yr"></span> LockIQ Rates &mdash; lockiqrates.com &middot; All rights reserved.
+  </footer>
+
+  <script>document.getElementById('yr').textContent = new Date().getFullYear();</script>
+</body>
+</html>
