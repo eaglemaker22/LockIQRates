@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard — LockIQ Rates</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --navy: #0f1f3d;
+      --blue: #1a56db;
+      --gold: #f5a623;
+      --light: #f4f6fb;
+      --text: #1e2a3a;
+      --muted: #6b7a90;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--light);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* Loading / error states */
+    #loading-screen {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      gap: 1rem;
+      color: var(--muted);
+    }
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid #dde3ef;
+      border-top-color: var(--blue);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    #error-screen {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      gap: 1rem;
+      padding: 2rem;
+      text-align: center;
+    }
+    #error-screen h2 { color: var(--navy); }
+    #error-screen p { color: var(--muted); max-width: 400px; }
+    .btn {
+      display: inline-block;
+      padding: 0.75rem 1.5rem;
+      border-radius: 8px;
+      font-weight: 700;
+      text-decoration: none;
+      font-size: 0.95rem;
+      cursor: pointer;
+      border: none;
+    }
+    .btn-primary { background: var(--blue); color: #fff; }
+    .btn-outline { background: transparent; border: 2px solid var(--blue); color: var(--blue); }
+
+    /* App shell — hidden until auth confirmed */
+    #app-shell { display: none; }
+
+    nav {
+      background: var(--navy);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 2rem;
+      height: 60px;
+    }
+    .logo { color: #fff; font-size: 1.25rem; font-weight: 700; letter-spacing: -0.5px; }
+    .logo span { color: var(--gold); }
+    .nav-right { display: flex; align-items: center; gap: 1rem; }
+    .user-email { color: #8aaad4; font-size: 0.85rem; }
+    #sign-out-btn {
+      background: transparent;
+      border: 1px solid rgba(255,255,255,0.3);
+      color: #fff;
+      padding: 0.4rem 1rem;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+    #sign-out-btn:hover { background: rgba(255,255,255,0.1); }
+
+    main {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 4rem 1.5rem;
+      text-align: center;
+    }
+    .coming-soon-badge {
+      display: inline-block;
+      background: var(--gold);
+      color: var(--navy);
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 0.3rem 0.8rem;
+      border-radius: 20px;
+      margin-bottom: 1.5rem;
+    }
+    main h1 { font-size: 2.25rem; color: var(--navy); margin-bottom: 1rem; }
+    main p { color: var(--muted); font-size: 1.05rem; line-height: 1.6; max-width: 480px; margin: 0 auto 2rem; }
+
+    .feature-preview {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-top: 2.5rem;
+    }
+    .preview-card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 1.5rem;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+      opacity: 0.55;
+    }
+    .preview-card .icon { font-size: 1.6rem; margin-bottom: 0.5rem; }
+    .preview-card h3 { font-size: 0.95rem; color: var(--navy); }
+    .preview-card p { font-size: 0.8rem; color: var(--muted); margin-top: 0.3rem; }
+  </style>
+</head>
+<body>
+
+  <!-- Loading state -->
+  <div id="loading-screen">
+    <div class="spinner"></div>
+    <span>Loading your dashboard&hellip;</span>
+  </div>
+
+  <!-- Error state (shown if something goes wrong) -->
+  <div id="error-screen">
+    <h2>Something went wrong</h2>
+    <p id="error-msg">We couldn't load your dashboard. Please try again.</p>
+    <a href="/" class="btn btn-primary">Back to Home</a>
+  </div>
+
+  <!-- App shell (shown after auth check passes) -->
+  <div id="app-shell">
+    <nav>
+      <div class="logo">Lock<span>IQ</span> Rates</div>
+      <div class="nav-right">
+        <span class="user-email" id="user-email"></span>
+        <button id="sign-out-btn">Sign out</button>
+      </div>
+    </nav>
+
+    <main>
+      <div class="coming-soon-badge">Coming Soon</div>
+      <h1>Dashboard coming soon</h1>
+      <p>Your market intelligence dashboard is under construction. You'll get real-time MBS data, shadow bond spreads, and broker rates right here.</p>
+
+      <div class="feature-preview">
+        <div class="preview-card">
+          <div class="icon">📈</div>
+          <h3>Live MBS Pricing</h3>
+          <p>Real-time coupon stream</p>
+        </div>
+        <div class="preview-card">
+          <div class="icon">🔗</div>
+          <h3>Shadow Bonds</h3>
+          <p>Spread analysis</p>
+        </div>
+        <div class="preview-card">
+          <div class="icon">💹</div>
+          <h3>10-Year Treasury</h3>
+          <p>Live yield tracker</p>
+        </div>
+        <div class="preview-card">
+          <div class="icon">🏦</div>
+          <h3>Broker Rates</h3>
+          <p>Multi-lender comparison</p>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Clerk JS -->
+  <script src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js" type="text/javascript"></script>
+
+  <script>
+    (async () => {
+      const loading  = document.getElementById('loading-screen');
+      const errorDiv = document.getElementById('error-screen');
+      const errorMsg = document.getElementById('error-msg');
+      const appShell = document.getElementById('app-shell');
+
+      function showError(msg) {
+        loading.style.display  = 'none';
+        errorDiv.style.display = 'flex';
+        errorMsg.textContent   = msg;
+      }
+
+      // ── 1. Load Clerk publishable key ──────────────────────────────────
+      let clerkPublishableKey;
+      try {
+        const res = await fetch('/.netlify/functions/getConfig');
+        if (!res.ok) throw new Error('Config fetch failed');
+        ({ clerkPublishableKey } = await res.json());
+      } catch {
+        showError('Could not load authentication config. Please refresh.');
+        return;
+      }
+
+      // ── 2. Initialize Clerk ────────────────────────────────────────────
+      const clerk = window.Clerk;
+      try {
+        await clerk.load({ publishableKey: clerkPublishableKey });
+      } catch {
+        showError('Authentication service failed to load. Please refresh.');
+        return;
+      }
+
+      // ── 3. Gate: must be signed in ─────────────────────────────────────
+      if (!clerk.user) {
+        window.location.href = '/';
+        return;
+      }
+
+      // ── 4. Check if this is a post-signup redirect needing checkout ────
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('checkout') === '1') {
+        // Remove the query param from history so a refresh doesn't re-trigger
+        history.replaceState(null, '', '/app.html');
+
+        let checkoutUrl;
+        try {
+          const token = await clerk.session.getToken();
+          const res = await fetch('/.netlify/functions/createCheckoutSession', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` },
+          });
+          if (!res.ok) throw new Error('Checkout session creation failed');
+          ({ url: checkoutUrl } = await res.json());
+        } catch (err) {
+          console.error(err);
+          showError('Could not start checkout. Please try again or contact support.');
+          return;
+        }
+
+        window.location.href = checkoutUrl;
+        return;
+      }
+
+      // ── 5. Show dashboard ──────────────────────────────────────────────
+      loading.style.display  = 'none';
+      appShell.style.display = 'block';
+
+      const emailEl = document.getElementById('user-email');
+      emailEl.textContent = clerk.user.primaryEmailAddress?.emailAddress || '';
+
+      document.getElementById('sign-out-btn').addEventListener('click', async () => {
+        await clerk.signOut();
+        window.location.href = '/';
+      });
+    })();
+  </script>
+</body>
+</html>

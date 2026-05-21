@@ -177,6 +177,15 @@
       color: var(--muted);
       border-top: 1px solid #e2e8f0;
     }
+
+    /* CTA buttons that are driven by JS */
+    .cta-btn {
+      cursor: pointer;
+      display: inline-block;
+      border: none;
+      font-family: inherit;
+    }
+    .cta-btn:disabled { opacity: 0.6; cursor: default; }
   </style>
 </head>
 <body>
@@ -184,7 +193,7 @@
   <!-- NAV -->
   <nav>
     <div class="logo">Lock<span>IQ</span> Rates</div>
-    <a class="nav-cta" href="/sign-up">Start Free Trial</a>
+    <button class="nav-cta cta-btn" id="nav-cta">Start Free Trial</button>
   </nav>
 
   <!-- HERO -->
@@ -192,7 +201,7 @@
     <h1>Mortgage Market Intelligence <em>Built for Loan Officers</em></h1>
     <p>Real-time MBS pricing, shadow bond analysis, and live broker rates — everything you need to lock with confidence.</p>
     <div class="hero-actions">
-      <a class="btn-primary" href="/sign-up">Start Your 7-Day Free Trial</a>
+      <button class="btn-primary cta-btn" id="hero-cta">Start Your 7-Day Free Trial</button>
       <a class="btn-secondary" href="#features">See How It Works</a>
     </div>
     <p class="trial-note">No commitment during trial &middot; Card required &middot; Cancel anytime</p>
@@ -236,7 +245,7 @@
         <li>Daily market summary digest</li>
         <li>7-day free trial included</li>
       </ul>
-      <a class="btn-pricing" href="/sign-up">Get Started — Free for 7 Days</a>
+      <button class="btn-pricing cta-btn" id="pricing-cta">Get Started — Free for 7 Days</button>
       <p class="price-footnote">$8.99/mo after trial &middot; Card required at signup</p>
     </div>
   </section>
@@ -247,5 +256,51 @@
   </footer>
 
   <script>document.getElementById('yr').textContent = new Date().getFullYear();</script>
+
+  <!-- Clerk JS -->
+  <script src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js" type="text/javascript"></script>
+
+  <script>
+    (async () => {
+      const ctaBtns = ['nav-cta', 'hero-cta', 'pricing-cta'].map(id => document.getElementById(id));
+
+      // ── Load Clerk publishable key ────────────────────────────────────
+      let clerkPublishableKey;
+      try {
+        const res = await fetch('/.netlify/functions/getConfig');
+        if (!res.ok) throw new Error();
+        ({ clerkPublishableKey } = await res.json());
+      } catch {
+        // Config failed — fall back to plain hrefs so buttons still work
+        ctaBtns.forEach(btn => {
+          btn.addEventListener('click', () => { window.location.href = '/app.html?checkout=1'; });
+        });
+        return;
+      }
+
+      // ── Initialize Clerk ───────────────────────────────────────────────
+      const clerk = window.Clerk;
+      await clerk.load({ publishableKey: clerkPublishableKey });
+
+      // If already signed in, send straight to dashboard
+      if (clerk.user) {
+        ctaBtns.forEach(btn => {
+          btn.textContent = 'Go to Dashboard';
+          btn.addEventListener('click', () => { window.location.href = '/app.html'; });
+        });
+        return;
+      }
+
+      // ── Wire up sign-up buttons ────────────────────────────────────────
+      function openSignUp() {
+        clerk.openSignUp({
+          afterSignUpUrl: `${window.location.origin}/app.html?checkout=1`,
+          afterSignInUrl: `${window.location.origin}/app.html`,
+        });
+      }
+
+      ctaBtns.forEach(btn => btn.addEventListener('click', openSignUp));
+    })();
+  </script>
 </body>
 </html>
