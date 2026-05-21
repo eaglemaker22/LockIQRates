@@ -261,45 +261,67 @@
   <script src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js" type="text/javascript"></script>
 
   <script>
-    (async () => {
-      const ctaBtns = ['nav-cta', 'hero-cta', 'pricing-cta'].map(id => document.getElementById(id));
+    (function () {
+      var FALLBACK = '/app.html?checkout=1';
+      var btnIds = ['nav-cta', 'hero-cta', 'pricing-cta'];
 
-      // ── Load Clerk publishable key ────────────────────────────────────
-      let clerkPublishableKey;
-      try {
-        const res = await fetch('/.netlify/functions/getConfig');
-        if (!res.ok) throw new Error();
-        ({ clerkPublishableKey } = await res.json());
-      } catch {
-        // Config failed — fall back to plain hrefs so buttons still work
-        ctaBtns.forEach(btn => {
-          btn.addEventListener('click', () => { window.location.href = '/app.html?checkout=1'; });
-        });
-        return;
+      // ── Step 1: wire fallback handlers immediately (synchronous) ──────
+      // Buttons are always clickable from first paint, no matter what
+      // happens with Clerk or the config function below.
+      function setHandler(btn, fn) {
+        // Clone to drop any previously attached listeners, then re-attach
+        var fresh = btn.cloneNode(true);
+        btn.parentNode.replaceChild(fresh, btn);
+        fresh.addEventListener('click', fn);
+        return fresh;
       }
 
-      // ── Initialize Clerk ───────────────────────────────────────────────
-      const clerk = window.Clerk;
-      await clerk.load({ publishableKey: clerkPublishableKey });
+      var btns = btnIds.map(function (id) {
+        var btn = document.getElementById(id);
+        return setHandler(btn, function () { window.location.href = FALLBACK; });
+      });
 
-      // If already signed in, send straight to dashboard
-      if (clerk.user) {
-        ctaBtns.forEach(btn => {
-          btn.textContent = 'Go to Dashboard';
-          btn.addEventListener('click', () => { window.location.href = '/app.html'; });
+      // ── Step 2: try to upgrade to Clerk sign-up modal ─────────────────
+      // Any failure at any point keeps the plain-redirect fallback intact.
+      (async function () {
+        // 2a. Fetch publishable key
+        var clerkPublishableKey;
+        try {
+          var res = await fetch('/.netlify/functions/getConfig');
+          if (!res.ok) return; // fallback stays
+          ({ clerkPublishableKey } = await res.json());
+        } catch { return; }
+
+        // 2b. Ensure Clerk CDN script actually loaded
+        if (!window.Clerk) return;
+
+        // 2c. Initialize Clerk
+        try {
+          await window.Clerk.load({ publishableKey: clerkPublishableKey });
+        } catch { return; }
+
+        var clerk = window.Clerk;
+
+        // 2d. Already signed in → send to dashboard
+        if (clerk.user) {
+          btns = btns.map(function (btn) {
+            var b = setHandler(btn, function () { window.location.href = '/app.html'; });
+            b.textContent = 'Go to Dashboard';
+            return b;
+          });
+          return;
+        }
+
+        // 2e. Upgrade to Clerk sign-up modal
+        btns.forEach(function (btn) {
+          setHandler(btn, function () {
+            clerk.openSignUp({
+              afterSignUpUrl: window.location.origin + '/app.html?checkout=1',
+              afterSignInUrl: window.location.origin + '/app.html',
+            });
+          });
         });
-        return;
-      }
-
-      // ── Wire up sign-up buttons ────────────────────────────────────────
-      function openSignUp() {
-        clerk.openSignUp({
-          afterSignUpUrl: `${window.location.origin}/app.html?checkout=1`,
-          afterSignInUrl: `${window.location.origin}/app.html`,
-        });
-      }
-
-      ctaBtns.forEach(btn => btn.addEventListener('click', openSignUp));
+      })();
     })();
   </script>
 </body>
