@@ -24,6 +24,10 @@ function getDb() {
  *   market_data/mbs_products
  *   market_data/us10y_current
  *   market_data/broker_rates
+ *   market_data/fred_cache
+ *   market_data/econ_calendar      (legacy)
+ *   econ_calendar_focus/today      (today's high-impact events)
+ *   econ_calendar_focus/upcoming   (next 7-day events)
  */
 exports.handler = async (event) => {
   // Only allow GET requests
@@ -37,24 +41,32 @@ exports.handler = async (event) => {
   try {
     const db = getDb();
     const marketDataRef = db.collection("market_data");
+    const calFocusRef  = db.collection("econ_calendar_focus");
 
     // Fetch all documents in parallel
-    const [shadowBonds, mbsProducts, us10y, brokerRates, fredCache, econCalendar] = await Promise.all([
+    const [
+      shadowBonds, mbsProducts, us10y, brokerRates, fredCache, econCalendar,
+      calToday, calUpcoming,
+    ] = await Promise.all([
       marketDataRef.doc("shadow_bonds").get(),
       marketDataRef.doc("mbs_products").get(),
       marketDataRef.doc("us10y_current").get(),
       marketDataRef.doc("broker_rates").get(),
       marketDataRef.doc("fred_cache").get(),
       marketDataRef.doc("econ_calendar").get(),
+      calFocusRef.doc("today").get(),
+      calFocusRef.doc("upcoming").get(),
     ]);
 
     const payload = {
-      shadow_bonds: shadowBonds.exists ? shadowBonds.data() : null,
-      mbs_products: mbsProducts.exists ? mbsProducts.data() : null,
-      us10y_current: us10y.exists ? us10y.data() : null,
-      broker_rates: brokerRates.exists ? brokerRates.data() : null,
-      fred_cache: fredCache.exists ? fredCache.data() : null,
+      shadow_bonds:  shadowBonds.exists  ? shadowBonds.data()  : null,
+      mbs_products:  mbsProducts.exists  ? mbsProducts.data()  : null,
+      us10y_current: us10y.exists        ? us10y.data()        : null,
+      broker_rates:  brokerRates.exists  ? brokerRates.data()  : null,
+      fred_cache:    fredCache.exists    ? fredCache.data()    : null,
       econ_calendar: econCalendar.exists ? econCalendar.data() : null,
+      econ_calendar_today:    calToday.exists    ? calToday.data()    : null,
+      econ_calendar_upcoming: calUpcoming.exists ? calUpcoming.data() : null,
       fetched_at: new Date().toISOString(),
     };
 
