@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c \"import ast, pathlib; src=pathlib.Path\\('scripts/master_loop.py'\\).read_text\\(\\); ast.parse\\(src\\); print\\('Syntax OK'\\)\")",
+      "Bash(python -c \"import ast, pathlib; src=pathlib.Path\\('scripts/master_loop.py'\\).read_text\\(encoding='utf-8'\\); ast.parse\\(src\\); print\\('Syntax OK'\\)\")",
+      "Bash(python -m scripts.master_loop)",
+      "Bash(taskkill /F /FI \"IMAGENAME eq python.exe\")",
+      "Bash(taskkill *)",
+      "Bash(python -c \"import ast, pathlib; ast.parse\\(pathlib.Path\\('scripts/master_loop.py'\\).read_text\\(encoding='utf-8'\\)\\); print\\('Syntax OK'\\)\")"
+    ]
+  }
+}
