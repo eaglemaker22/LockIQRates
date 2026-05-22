@@ -245,19 +245,13 @@
     <div class="dash-section" id="section-calendar">
       <div class="section-hd" style="margin-bottom:.75rem;">
         <span class="section-title">Economic Calendar</span>
+        <div class="cal-tabs" id="cal-tabs">
+          <button class="cal-tab active" data-tab="today">Today</button>
+          <button class="cal-tab" data-tab="tomorrow">Tomorrow</button>
+          <button class="cal-tab" data-tab="week">This Week</button>
+        </div>
       </div>
-      <table class="cal-table">
-        <thead>
-          <tr><th>Time (ET)</th><th>Event</th><th>Impact</th></tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td style="color:var(--muted);white-space:nowrap">8:30 AM</td>
-            <td>Initial Jobless Claims</td>
-            <td><span class="impact-high">HIGH</span></td>
-          </tr>
-        </tbody>
-      </table>
+      <div id="cal-content">Loading...</div>
     </div>
 
   </div><!-- /.dashboard -->
@@ -276,6 +270,7 @@ const state = {
   market:  null,   // getMarketData response
   anchorKey: null, // currently selected anchor
   loanAmount: 400000,
+  calTab: 'today',
 };
 let chartInstance = null;
 let refreshTimer  = null;
@@ -661,6 +656,64 @@ function renderFedSnapshot() {
 }
 
 // ════════════════════════════════════════════════════════════════════════════
+// SECTION 6 — ECONOMIC CALENDAR
+// ════════════════════════════════════════════════════════════════════════════
+function renderEconCalendar() {
+  const calEl = $('cal-content');
+  if (!state.market) {
+    calEl.innerHTML = '<p class="cal-empty">No calendar data</p>';
+    return;
+  }
+
+  // Pick event source by tab
+  const tomorrowStr = etDateString(1);
+  const week        = getWeekRange(0);
+
+  let rawEvents;
+  if (state.calTab === 'today') {
+    rawEvents = state.market.econ_calendar_today?.events || [];
+  } else if (state.calTab === 'tomorrow') {
+    rawEvents = (state.market.econ_calendar_upcoming?.events || [])
+      .filter(e => e.date === tomorrowStr);
+  } else {
+    rawEvents = (state.market.econ_calendar_upcoming?.events || [])
+      .filter(e => e.date >= week.start && e.date <= week.end);
+  }
+
+  // Keep High, Medium, and any star_event; drop Low non-stars
+  const events = rawEvents.filter(e =>
+    e.impact_label !== 'Low' || e.star_event === true
+  );
+
+  if (events.length === 0) {
+    calEl.innerHTML = '<p class="cal-empty">No events for this period</p>';
+    return;
+  }
+
+  const showDate  = state.calTab !== 'today';
+  const dateHdr   = showDate ? '<th>Date</th>' : '';
+  const rows = events.map(e => {
+    const badge    = e.impact_label === 'High'
+      ? '<span class="impact-high">HIGH</span>'
+      : '<span class="impact-medium">MED</span>';
+    const forecast = (e.forecast != null && e.forecast !== '') ? e.forecast : '—';
+    const actual   = (e.actual   != null && e.actual   !== '') ? e.actual   : null;
+    const dateCell = showDate ? `<td style="color:var(--muted)">${e.date || ''}</td>` : '';
+    return `<tr>
+      ${dateCell}
+      <td style="color:var(--muted);white-space:nowrap">${e.time || '—'}</td>
+      <td>${e.event || ''}</td>
+      <td>${badge}</td>
+      <td style="text-align:right;color:var(--muted)">${forecast}</td>
+      <td style="text-align:right">${actual != null ? actual : '<span style="color:var(--muted)">—</span>'}</td>
+    </tr>`;
+  }).join('');
+
+  calEl.innerHTML = `<table class="cal-table">
+    <thead><tr>${dateHdr}<th>Time (ET)</th><th>Event</th><th>Impact</th><th style="text-align:right">Forecast</th><th style="text-align:right">Actual</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+}
 
 // ════════════════════════════════════════════════════════════════════════════
 // RENDER ALL
@@ -672,6 +725,7 @@ function renderAll() {
   renderMarketProxy();
   renderBrokerRates();
   renderFedSnapshot();
+  renderEconCalendar();
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -682,6 +736,16 @@ async function initDashboard() {
   $('loan-amount').addEventListener('input', e => {
     const v = parseInt(e.target.value, 10);
     if (v > 0) { state.loanAmount = v; renderPricingEngine(); }
+  });
+
+  // Calendar tab switcher
+  document.querySelectorAll('.cal-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.cal-tab').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      state.calTab = btn.dataset.tab;
+      renderEconCalendar();
+    });
   });
 
   // Initial load
