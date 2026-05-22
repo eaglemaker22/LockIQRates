@@ -17,7 +17,8 @@
       "Bash(node --check netlify/functions/getMarketData.js)",
       "Bash(git add *)",
       "Bash(git commit -m ' *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(node --check \"C:\\\\Users\\\\csthe\\\\OneDrive\\\\Documents\\\\GitHub\\\\LockIQRates\\\\netlify\\\\functions\\\\getLockIQHistory.js\")"
     ]
   }
 }

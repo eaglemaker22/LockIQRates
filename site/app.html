@@ -86,7 +86,15 @@
     .signal-flat   { background: rgba(139,153,180,0.15); color: var(--muted); border: 1px solid rgba(139,153,180,0.3); }
 
     /* ── CHART ── */
-    .chart-wrap { position: relative; height: 240px; }
+    .chart-view-tabs { display: flex; gap: 0.25rem; }
+    .chart-view-tab { background: transparent; border: 1px solid var(--border); color: var(--muted); padding: 0.3rem 0.75rem; border-radius: 6px; font-size: 0.75rem; cursor: pointer; font-family: inherit; transition: background 0.15s; }
+    .chart-view-tab.active { background: var(--blue); border-color: var(--blue); color: #fff; }
+    .chart-summary { display: flex; align-items: flex-start; gap: 2rem; padding: 0.6rem 0 0.9rem; border-bottom: 1px solid var(--border); margin-bottom: 0.85rem; flex-wrap: wrap; row-gap: 0.5rem; }
+    .chart-sum-item { display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; }
+    .chart-sum-label { font-size: 0.63rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); }
+    .chart-sum-value { font-size: 1.05rem; font-weight: 700; line-height: 1.2; }
+    .chart-sum-sub   { font-size: 0.74rem; color: var(--muted); }
+    .chart-wrap { position: relative; height: 280px; }
 
     /* ── MARKET TILES ── */
     .market-tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
@@ -199,8 +207,15 @@
     <!-- ── SECTION 2: CHART ── -->
     <div class="dash-section" id="section-chart">
       <div class="section-hd">
-        <span class="section-title">LockIQ Pricing Index — Intraday</span>
+        <span class="section-title">LockIQ Pricing Index</span>
+        <div class="chart-view-tabs" id="chart-view-tabs">
+          <button class="chart-view-tab active" data-view="today">Today</button>
+          <button class="chart-view-tab" data-view="yesterday">Yesterday</button>
+          <button class="chart-view-tab" data-view="week">This Week</button>
+          <button class="chart-view-tab" data-view="30d">30 Days</button>
+        </div>
       </div>
+      <div id="chart-summary"></div>
       <div class="chart-wrap">
         <canvas id="lockiq-chart-canvas"></canvas>
       </div>
@@ -272,9 +287,12 @@ const state = {
   anchorKey: null, // currently selected anchor
   loanAmount: 400000,
   calTab: 'today',
+  chartView: 'today',
+  historyCache: {},   // keyed by days string; each entry: { data, ts }
 };
 let chartInstance = null;
 let refreshTimer  = null;
+let _chartPoints  = [];   // current chart point objects (for tooltip dollar lookup)
 
 // ════════════════════════════════════════════════════════════════════════════
 // HELPERS
@@ -452,78 +470,279 @@ function renderPricingEngine() {
 // ════════════════════════════════════════════════════════════════════════════
 // SECTION 2 — CHART
 // ════════════════════════════════════════════════════════════════════════════
-function renderChart() {
-  const raw = state.chart;
-  const canvas = $('lockiq-chart-canvas');
 
-  if (!raw) {
-    canvas.parentElement.innerHTML = '<p style="color:var(--muted);font-size:.85rem;padding:.5rem 0;">Chart data unavailable</p>';
+// ── History fetch ─────────────────────────────────────────────────────────
+async function fetchHistory(days) {
+  try {
+    const res = await fetch(`/.netlify/functions/getLockIQHistory?days=${days}`);
+    if (!res.ok) return null;
+    return await res.json();
+  } catch { return null; }
+}
+
+// ── Summary bar (Today view only) ─────────────────────────────────────────
+function renderChartSummary() {
+  const el = $('chart-summary');
+  if (!el) return;
+  if (state.chartView !== 'today') { el.innerHTML = ''; return; }
+
+  const idx = state.index;
+  if (!idx) { el.innerHTML = ''; return; }
+
+  const pts      = num(idx.live_conventional_index_pts);
+  const per100k  = num(idx.conv_dollars_per_100k);
+  const mult     = state.loanAmount / 100000;
+  const dollars  = per100k != null ? per100k * mult
+                  : pts != null    ? pts * 10 * mult
+                  : null;
+  const signal   = (idx.conv_signal || '').toUpperCase();
+  const sigClass = signal === 'BETTER' ? 'signal-better' : signal === 'WORSE' ? 'signal-worse' : 'signal-flat';
+  const ptsClass = pts == null ? 'neu' : pts > 0 ? 'pos' : pts < 0 ? 'neg' : 'neu';
+  const ptsStr   = pts != null ? (pts > 0 ? '+' : '') + pts.toFixed(2) + ' pts' : '—';
+  const dolStr   = dollars != null
+    ? (dollars > 0 ? '+' : '') + '$' + Math.abs(dollars).toLocaleString('en-US', { maximumFractionDigits: 0 })
+    : '—';
+  const anchor   = idx.anchor_label || idx.anchor_key || '7:15 AM';
+
+  el.className = 'chart-summary';
+  el.innerHTML = `
+    <div class="chart-sum-item">
+      <div class="chart-sum-label">Conv since 7:15 AM</div>
+      <div class="chart-sum-value ${ptsClass}">${ptsStr}</div>
+      <div class="chart-sum-sub">${dolStr} on $${state.loanAmount.toLocaleString()}</div>
+    </div>
+    ${signal ? `<div class="chart-sum-item">
+      <div class="chart-sum-label">Signal</div>
+      <div style="margin-top:.3rem"><span class="signal-badge ${sigClass}">${signal}</span></div>
+    </div>` : ''}
+    <div class="chart-sum-item" style="margin-left:auto">
+      <div class="chart-sum-label">Anchor</div>
+      <div class="chart-sum-value" style="font-size:.82rem;font-weight:600;color:var(--muted)">${anchor}</div>
+    </div>`;
+}
+
+// ── Inline Chart.js plugin: zero-line + green/red zone shading ─────────────
+const _zeroBgPlugin = {
+  id: 'zeroBg',
+  beforeDatasetsDraw(chart) {
+    const { ctx, chartArea, scales } = chart;
+    if (!chartArea || !scales.y) return;
+    const { top, bottom, left, right } = chartArea;
+    const zero = Math.max(top, Math.min(bottom, scales.y.getPixelForValue(0)));
+    ctx.save();
+    ctx.fillStyle = 'rgba(34,197,94,0.07)';
+    ctx.fillRect(left, top, right - left, zero - top);
+    ctx.fillStyle = 'rgba(239,68,68,0.07)';
+    ctx.fillRect(left, zero, right - left, bottom - zero);
+    ctx.strokeStyle = 'rgba(255,255,255,0.22)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([5, 5]);
+    ctx.beginPath(); ctx.moveTo(left, zero); ctx.lineTo(right, zero); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+  },
+};
+
+// ── Core chart builder ─────────────────────────────────────────────────────
+// pts: array of { label, conv, govt, fha, va, convPer100k? }
+function renderChartFromPoints(pts) {
+  const wrap = document.querySelector('.chart-wrap');
+  if (!wrap) return;
+
+  _chartPoints = pts || [];
+
+  if (!pts || pts.length === 0) {
+    if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
+    wrap.innerHTML = '<p style="color:var(--muted);font-size:.85rem;padding:2.5rem 0;text-align:center;">No data for this period</p>';
     return;
   }
 
-  // Parse flexible data shapes
-  let labels = [], convPts = [], fhaPts = [], vaPts = [];
-
-  const points = raw.points || raw.data || raw.chart_data?.points;
-  if (Array.isArray(points) && points.length > 0) {
-    labels  = points.map(p => p.time_label || p.time || p.t || '');
-    convPts = points.map(p => num(p.conv_pts ?? p.conv ?? p.conventional));
-    fhaPts  = points.map(p => num(p.fha_pts  ?? p.fha));
-    vaPts   = points.map(p => num(p.va_pts   ?? p.va));
-  } else {
-    const l = raw.labels || raw.times || raw.chart_data?.labels;
-    if (Array.isArray(l)) {
-      labels  = l;
-      convPts = (raw.conv || raw.chart_data?.conv || []).map(num);
-      fhaPts  = (raw.fha  || raw.chart_data?.fha  || []).map(num);
-      vaPts   = (raw.va   || raw.chart_data?.va   || []).map(num);
-    }
-  }
-
-  if (labels.length === 0) {
-    canvas.parentElement.innerHTML = '<p style="color:var(--muted);font-size:.85rem;padding:.5rem 0;">No intraday data yet</p>';
-    return;
+  // Restore canvas if previously replaced by a message
+  if (!$('lockiq-chart-canvas')) {
+    wrap.innerHTML = '<canvas id="lockiq-chart-canvas"></canvas>';
   }
 
   if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
 
-  chartInstance = new Chart(canvas, {
+  const sparse = pts.length > 30;
+
+  chartInstance = new Chart($('lockiq-chart-canvas'), {
     type: 'line',
+    plugins: [_zeroBgPlugin],
     data: {
-      labels,
+      labels: pts.map(p => p.label),
       datasets: [
-        { label: 'Conventional', data: convPts, borderColor: '#1a56db', backgroundColor: 'transparent', borderWidth: 2, pointRadius: 0, tension: 0.3 },
-        { label: 'FHA',          data: fhaPts,  borderColor: '#f5a623', backgroundColor: 'transparent', borderWidth: 2, pointRadius: 0, tension: 0.3 },
-        { label: 'VA',           data: vaPts,   borderColor: '#22c55e', backgroundColor: 'transparent', borderWidth: 2, pointRadius: 0, tension: 0.3 },
+        {
+          label: 'Conventional',
+          data: pts.map(p => p.conv),
+          borderColor: '#22c55e',
+          backgroundColor: 'transparent',
+          borderWidth: 2,
+          pointRadius: sparse ? 0 : 3,
+          pointHoverRadius: 5,
+          tension: 0.3,
+          hidden: false,
+        },
+        {
+          label: "Gov’t",
+          data: pts.map(p => p.govt),
+          borderColor: '#3b82f6',
+          backgroundColor: 'transparent',
+          borderWidth: 2,
+          borderDash: [6, 3],
+          pointRadius: sparse ? 0 : 3,
+          pointHoverRadius: 5,
+          tension: 0.3,
+          hidden: false,
+        },
+        {
+          label: 'FHA',
+          data: pts.map(p => p.fha),
+          borderColor: '#f5a623',
+          backgroundColor: 'transparent',
+          borderWidth: 2,
+          pointRadius: sparse ? 0 : 3,
+          pointHoverRadius: 5,
+          tension: 0.3,
+          hidden: true,
+        },
+        {
+          label: 'VA',
+          data: pts.map(p => p.va),
+          borderColor: '#a855f7',
+          backgroundColor: 'transparent',
+          borderWidth: 2,
+          pointRadius: sparse ? 0 : 3,
+          pointHoverRadius: 5,
+          tension: 0.3,
+          hidden: true,
+        },
       ],
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
       plugins: {
-        legend: { labels: { color: '#8aaad4', font: { size: 11 }, boxWidth: 20 } },
+        legend: {
+          labels: {
+            color: '#8aaad4',
+            font: { size: 11 },
+            boxWidth: 24,
+            usePointStyle: true,
+            pointStyleWidth: 16,
+          },
+        },
         tooltip: {
+          backgroundColor: '#0f1f3d',
+          borderColor: '#1a3366',
+          borderWidth: 1,
+          titleColor: '#e8edf5',
+          bodyColor: '#8aaad4',
+          padding: 10,
           callbacks: {
-            label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y != null ? (ctx.parsed.y > 0 ? '+' : '') + ctx.parsed.y.toFixed(2) + ' pts' : '—'}`,
+            title: items => _chartPoints[items[0]?.dataIndex]?.label ?? items[0]?.label ?? '',
+            label: ctx => {
+              const v = ctx.parsed.y;
+              if (v == null) return null;
+              return `${ctx.dataset.label}: ${v >= 0 ? '+' : ''}${v.toFixed(2)} pts`;
+            },
+            afterBody: items => {
+              const ci   = items.find(i => i.dataset.label === 'Conventional');
+              const idx  = ci?.dataIndex;
+              if (idx == null || ci.parsed.y == null) return [];
+              const pt   = _chartPoints[idx];
+              const per100k = pt?.convPer100k;
+              const d = per100k != null
+                ? per100k * (state.loanAmount / 100000)
+                : ci.parsed.y * 10 * (state.loanAmount / 100000);
+              const sign = d >= 0 ? '+' : '';
+              return [`Conv impact: ${sign}$${Math.abs(d).toLocaleString('en-US', { maximumFractionDigits: 0 })} on $${state.loanAmount.toLocaleString()}`];
+            },
           },
         },
       },
       scales: {
         x: {
-          ticks: { color: '#8aaad4', font: { size: 10 }, maxTicksLimit: 10 },
-          grid:  { color: 'rgba(26,51,102,0.5)' },
+          ticks: { color: '#8aaad4', font: { size: 10 }, maxTicksLimit: 10, maxRotation: 0 },
+          grid:  { color: 'rgba(26,51,102,0.4)' },
         },
         y: {
           ticks: {
-            color: '#8aaad4', font: { size: 10 },
-            callback: v => (v > 0 ? '+' : '') + v.toFixed(1),
+            color: '#8aaad4',
+            font: { size: 10 },
+            callback: v => (v >= 0 ? '+' : '') + v.toFixed(1),
           },
-          grid: { color: 'rgba(26,51,102,0.5)' },
+          grid: { color: 'rgba(26,51,102,0.4)' },
         },
       },
     },
   });
 }
+
+// ── Load data for active view then render ──────────────────────────────────
+async function loadAndRenderChart() {
+  const view = state.chartView;
+
+  if (view === 'today') {
+    const rawPts = state.chart?.points || [];
+    renderChartFromPoints(rawPts.length ? rawPts.map(p => ({
+      label:      formatTime12(p.time) || p.anchor_key || '',
+      conv:       num(p.conv_index_pts),
+      govt:       num(p.govt_index_pts),
+      fha:        num(p.fha_index_pts),
+      va:         num(p.va_index_pts),
+      convPer100k: num(p.conv_dollars_per_100k),
+    })) : null);
+    return;
+  }
+
+  const daysMap  = { yesterday: 3, week: 7, '30d': 30 };
+  const days     = daysMap[view] || 7;
+  const cacheKey = String(days);
+  const now      = Date.now();
+  const cached   = state.historyCache[cacheKey];
+
+  let docs;
+  if (cached && (now - cached.ts) < 5 * 60 * 1000) {
+    docs = cached.data;
+  } else {
+    renderChartFromPoints(null);   // brief "no data" while fetching
+    docs = await fetchHistory(days);
+    state.historyCache[cacheKey] = { data: docs, ts: now };
+  }
+
+  if (view !== state.chartView) return;   // view changed while fetching
+
+  if (!Array.isArray(docs) || !docs.length) { renderChartFromPoints(null); return; }
+
+  let pts;
+  if (view === 'yesterday') {
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const yDoc = [...docs].reverse().find(d => d.date < todayStr) || docs[docs.length - 1];
+    const raw  = yDoc?.intraday_points || [];
+    pts = raw.map(p => ({
+      label:      formatTime12(p.time) || p.anchor_key || '',
+      conv:       num(p.conv_index_pts),
+      govt:       num(p.govt_index_pts),
+      fha:        num(p.fha_index_pts),
+      va:         num(p.va_index_pts),
+      convPer100k: num(p.conv_dollars_per_100k),
+    }));
+  } else {
+    pts = docs.map(d => ({
+      label: d.date,
+      conv:  num(d.conv_close),
+      govt:  num(d.govt_close),
+      fha:   num(d.fha_close),
+      va:    num(d.va_close),
+    }));
+  }
+
+  renderChartFromPoints(pts.length ? pts : null);
+}
+
+function renderChart() { loadAndRenderChart(); }
 
 // ════════════════════════════════════════════════════════════════════════════
 // SECTION 3 — MARKET PROXY
@@ -728,6 +947,7 @@ function renderEconCalendar() {
 function renderAll() {
   renderAnchorSelector();
   renderPricingEngine();
+  renderChartSummary();
   renderChart();
   renderMarketProxy();
   renderBrokerRates();
@@ -739,10 +959,21 @@ function renderAll() {
 // INIT
 // ════════════════════════════════════════════════════════════════════════════
 async function initDashboard() {
-  // Loan amount live recalculation (no refetch needed)
+  // Loan amount — update pricing engine and chart summary
   $('loan-amount').addEventListener('input', e => {
     const v = parseInt(e.target.value, 10);
-    if (v > 0) { state.loanAmount = v; renderPricingEngine(); }
+    if (v > 0) { state.loanAmount = v; renderPricingEngine(); renderChartSummary(); }
+  });
+
+  // Chart view tabs
+  document.querySelectorAll('.chart-view-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.chart-view-tab').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      state.chartView = btn.dataset.view;
+      renderChartSummary();
+      loadAndRenderChart();
+    });
   });
 
   // Calendar tab switcher
