@@ -58,9 +58,6 @@
     .ctrl-label { font-size: 0.68rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
     select, input[type="number"] { background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 0.4rem 0.65rem; border-radius: 6px; font-size: 0.85rem; font-family: inherit; }
     select:focus, input:focus { outline: none; border-color: var(--blue); }
-    .loan-wrap { display: flex; align-items: center; gap: 0; }
-    .loan-prefix { background: var(--bg); border: 1px solid var(--border); border-right: none; padding: 0.4rem 0.5rem; border-radius: 6px 0 0 6px; color: var(--muted); font-size: 0.85rem; }
-    .loan-wrap input { border-radius: 0 6px 6px 0; width: 115px; }
     .quality-badge { font-size: 0.68rem; font-weight: 700; letter-spacing: 0.5px; padding: 0.25rem 0.6rem; border-radius: 4px; text-transform: uppercase; }
     .quality-ok { background: rgba(34,197,94,0.15); color: var(--green); border: 1px solid rgba(34,197,94,0.3); }
     .quality-warn { background: rgba(245,158,11,0.15); color: var(--yellow); border: 1px solid rgba(245,158,11,0.3); }
@@ -75,11 +72,7 @@
     .card-pts.negative { color: var(--red); }
     .card-pts.neutral  { color: var(--muted); }
     .card-pts-label { font-size: 0.72rem; color: var(--muted); }
-    .card-dollars { font-size: 1.1rem; font-weight: 600; margin-top: 0.15rem; }
-    .card-dollars.positive { color: var(--green); }
-    .card-dollars.negative { color: var(--red); }
-    .card-dollars.neutral  { color: var(--muted); }
-    .card-per100k { font-size: 0.72rem; color: var(--muted); }
+    .card-bps { font-size: 0.82rem; color: var(--muted); }
     .signal-badge { display: inline-flex; align-items: center; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.5px; padding: 0.2rem 0.55rem; border-radius: 4px; width: fit-content; margin-top: 0.25rem; }
     .signal-better { background: rgba(34,197,94,0.15); color: var(--green); border: 1px solid rgba(34,197,94,0.3); }
     .signal-worse  { background: rgba(239,68,68,0.15);  color: var(--red);   border: 1px solid rgba(239,68,68,0.3); }
@@ -190,13 +183,6 @@
             <span class="ctrl-label">Compare vs</span>
             <select id="anchor-select"><option value="">— loading —</option></select>
           </div>
-          <div class="ctrl-group">
-            <span class="ctrl-label">Loan Amount</span>
-            <div class="loan-wrap">
-              <span class="loan-prefix">$</span>
-              <input type="number" id="loan-amount" value="400000" step="10000" min="50000" max="5000000" />
-            </div>
-          </div>
         </div>
       </div>
       <div class="pricing-cards" id="pricing-cards">
@@ -285,7 +271,6 @@ const state = {
   chart:   null,   // getLockIQChart response
   market:  null,   // getMarketData response
   anchorKey: null, // currently selected anchor
-  loanAmount: 400000,
   calTab: 'today',
   chartView: 'today',
   historyCache: {},   // keyed by days string; each entry: { data, ts }
@@ -433,30 +418,26 @@ function renderPricingEngine() {
   }
 
   const d = getAnchorData();
-  const loan = state.loanAmount;
-  const mult = loan / 100000;
 
   const products = [
-    { key: 'conv', label: 'Conventional', pts: num(d?.live_conventional_index_pts), per100k: num(d?.conv_dollars_per_100k), signal: d?.conv_signal },
-    { key: 'fha',  label: 'FHA',          pts: num(d?.live_fha_index_pts),          per100k: num(d?.fha_dollars_per_100k),  signal: d?.fha_signal  },
-    { key: 'va',   label: 'VA',           pts: num(d?.live_va_index_pts),           per100k: num(d?.va_dollars_per_100k),   signal: d?.va_signal   },
+    { label: 'Conventional', pts: num(d?.live_conventional_index_pts), signal: d?.conv_signal },
+    { label: 'FHA',          pts: num(d?.live_fha_index_pts),          signal: d?.fha_signal  },
+    { label: 'VA',           pts: num(d?.live_va_index_pts),           signal: d?.va_signal   },
   ];
 
   $('pricing-cards').innerHTML = products.map(p => {
     const ptsClass = p.pts == null ? 'neutral' : p.pts > 0 ? 'positive' : p.pts < 0 ? 'negative' : 'neutral';
-    const dolTotal = p.per100k != null ? p.per100k * mult : null;
-    const dolClass = dolTotal == null ? 'neutral' : dolTotal > 0 ? 'positive' : dolTotal < 0 ? 'negative' : 'neutral';
-    const sig = (p.signal || '').toUpperCase();
+    const sig      = (p.signal || '').toUpperCase();
     const sigClass = sig === 'BETTER' ? 'signal-better' : sig === 'WORSE' ? 'signal-worse' : 'signal-flat';
-    const ptsStr = p.pts != null ? (sign(p.pts) + fmt(p.pts, 1) + ' pts') : '— pts';
-    const dolStr = dolTotal != null ? (sign(dolTotal) + '$' + Math.abs(dolTotal).toLocaleString('en-US', {maximumFractionDigits:0})) : '—';
-    const per100kStr = p.per100k != null ? (sign(p.per100k) + '$' + Math.abs(p.per100k).toLocaleString('en-US', {maximumFractionDigits:0}) + ' / $100k') : '';
+    const ptsStr   = p.pts != null ? (p.pts >= 0 ? '+' : '') + fmt(p.pts, 2) + ' pts' : '— pts';
+    const bps      = p.pts != null ? p.pts * 100 : null;
+    const sigWord  = sig === 'BETTER' ? 'better' : sig === 'WORSE' ? 'worse' : sig === 'FLAT' ? 'flat' : '';
+    const bpsStr   = bps != null && sigWord ? fmt(Math.abs(bps), 1) + ' bps ' + sigWord : '';
     return `<div class="pricing-card">
       <div class="card-product">${p.label}</div>
       <div class="card-pts ${ptsClass}">${ptsStr}</div>
       <div class="card-pts-label">vs selected anchor</div>
-      <div class="card-dollars ${dolClass}">${dolStr}</div>
-      <div class="card-per100k">${per100kStr ? 'for $' + loan.toLocaleString() + ' &nbsp;·&nbsp; ' + per100kStr : ''}</div>
+      ${bpsStr ? `<div class="card-bps">${bpsStr}</div>` : ''}
       ${sig ? `<div class="signal-badge ${sigClass}">${sig}</div>` : ''}
     </div>`;
   }).join('');
@@ -484,32 +465,21 @@ function renderChartSummary() {
   const idx = state.index;
   if (!idx) { el.innerHTML = ''; return; }
 
-  const pts      = num(idx.live_conventional_index_pts);
-  const per100k  = num(idx.conv_dollars_per_100k);
-  const mult     = state.loanAmount / 100000;
-  const dollars  = per100k != null ? per100k * mult
-                  : pts != null    ? pts * 10 * mult
-                  : null;
-  const signal   = (idx.conv_signal || '').toUpperCase();
+  const pts     = num(idx.live_conventional_index_pts);
+  const bps     = pts != null ? pts * 100 : null;
+  const signal  = (idx.conv_signal || '').toUpperCase();
   const sigClass = signal === 'BETTER' ? 'signal-better' : signal === 'WORSE' ? 'signal-worse' : 'signal-flat';
-  const ptsClass = pts == null ? 'neu' : pts > 0 ? 'pos' : pts < 0 ? 'neg' : 'neu';
-  const ptsStr   = pts != null ? (pts > 0 ? '+' : '') + pts.toFixed(2) + ' pts' : '—';
-  const dolStr   = dollars != null
-    ? (dollars > 0 ? '+' : '') + '$' + Math.abs(dollars).toLocaleString('en-US', { maximumFractionDigits: 0 })
-    : '—';
-  const anchor   = idx.anchor_label || idx.anchor_key || '7:15 AM';
+  const bpsClass = bps == null ? 'neu' : bps > 0 ? 'pos' : bps < 0 ? 'neg' : 'neu';
+  const bpsStr  = bps != null ? (bps >= 0 ? '+' : '') + bps.toFixed(1) + ' bps' : '—';
+  const anchor  = idx.anchor_label || idx.anchor_key || '7:15 AM';
 
   el.className = 'chart-summary';
   el.innerHTML = `
     <div class="chart-sum-item">
       <div class="chart-sum-label">Conv since 7:15 AM</div>
-      <div class="chart-sum-value ${ptsClass}">${ptsStr}</div>
-      <div class="chart-sum-sub">${dolStr} on $${state.loanAmount.toLocaleString()}</div>
+      <div class="chart-sum-value ${bpsClass}">${bpsStr}</div>
+      ${signal ? `<div class="chart-sum-sub"><span class="signal-badge ${sigClass}">${signal}</span></div>` : ''}
     </div>
-    ${signal ? `<div class="chart-sum-item">
-      <div class="chart-sum-label">Signal</div>
-      <div style="margin-top:.3rem"><span class="signal-badge ${sigClass}">${signal}</span></div>
-    </div>` : ''}
     <div class="chart-sum-item" style="margin-left:auto">
       <div class="chart-sum-label">Anchor</div>
       <div class="chart-sum-value" style="font-size:.82rem;font-weight:600;color:var(--muted)">${anchor}</div>
@@ -569,7 +539,7 @@ function renderChartFromPoints(pts) {
       datasets: [
         {
           label: 'Conventional',
-          data: pts.map(p => p.conv),
+          data: pts.map(p => p.conv != null ? p.conv * 100 : null),
           borderColor: '#22c55e',
           backgroundColor: 'transparent',
           borderWidth: 2,
@@ -580,7 +550,7 @@ function renderChartFromPoints(pts) {
         },
         {
           label: "Gov’t",
-          data: pts.map(p => p.govt),
+          data: pts.map(p => p.govt != null ? p.govt * 100 : null),
           borderColor: '#3b82f6',
           backgroundColor: 'transparent',
           borderWidth: 2,
@@ -592,7 +562,7 @@ function renderChartFromPoints(pts) {
         },
         {
           label: 'FHA',
-          data: pts.map(p => p.fha),
+          data: pts.map(p => p.fha != null ? p.fha * 100 : null),
           borderColor: '#f5a623',
           backgroundColor: 'transparent',
           borderWidth: 2,
@@ -603,7 +573,7 @@ function renderChartFromPoints(pts) {
         },
         {
           label: 'VA',
-          data: pts.map(p => p.va),
+          data: pts.map(p => p.va != null ? p.va * 100 : null),
           borderColor: '#a855f7',
           backgroundColor: 'transparent',
           borderWidth: 2,
@@ -638,21 +608,9 @@ function renderChartFromPoints(pts) {
           callbacks: {
             title: items => _chartPoints[items[0]?.dataIndex]?.label ?? items[0]?.label ?? '',
             label: ctx => {
-              const v = ctx.parsed.y;
+              const v = ctx.parsed.y;   // already in bps (pts × 100)
               if (v == null) return null;
-              return `${ctx.dataset.label}: ${v >= 0 ? '+' : ''}${v.toFixed(2)} pts`;
-            },
-            afterBody: items => {
-              const ci   = items.find(i => i.dataset.label === 'Conventional');
-              const idx  = ci?.dataIndex;
-              if (idx == null || ci.parsed.y == null) return [];
-              const pt   = _chartPoints[idx];
-              const per100k = pt?.convPer100k;
-              const d = per100k != null
-                ? per100k * (state.loanAmount / 100000)
-                : ci.parsed.y * 10 * (state.loanAmount / 100000);
-              const sign = d >= 0 ? '+' : '';
-              return [`Conv impact: ${sign}$${Math.abs(d).toLocaleString('en-US', { maximumFractionDigits: 0 })} on $${state.loanAmount.toLocaleString()}`];
+              return `${ctx.dataset.label}: ${v >= 0 ? '+' : ''}${v.toFixed(1)} bps`;
             },
           },
         },
@@ -682,12 +640,11 @@ async function loadAndRenderChart() {
   if (view === 'today') {
     const rawPts = state.chart?.points || [];
     renderChartFromPoints(rawPts.length ? rawPts.map(p => ({
-      label:      formatTime12(p.time) || p.anchor_key || '',
-      conv:       num(p.conv_index_pts),
-      govt:       num(p.govt_index_pts),
-      fha:        num(p.fha_index_pts),
-      va:         num(p.va_index_pts),
-      convPer100k: num(p.conv_dollars_per_100k),
+      label: formatTime12(p.time) || p.anchor_key || '',
+      conv:  num(p.conv_index_pts),
+      govt:  num(p.govt_index_pts),
+      fha:   num(p.fha_index_pts),
+      va:    num(p.va_index_pts),
     })) : null);
     return;
   }
@@ -717,12 +674,11 @@ async function loadAndRenderChart() {
     const yDoc = [...docs].reverse().find(d => d.date < todayStr) || docs[docs.length - 1];
     const raw  = yDoc?.intraday_points || [];
     pts = raw.map(p => ({
-      label:      formatTime12(p.time) || p.anchor_key || '',
-      conv:       num(p.conv_index_pts),
-      govt:       num(p.govt_index_pts),
-      fha:        num(p.fha_index_pts),
-      va:         num(p.va_index_pts),
-      convPer100k: num(p.conv_dollars_per_100k),
+      label: formatTime12(p.time) || p.anchor_key || '',
+      conv:  num(p.conv_index_pts),
+      govt:  num(p.govt_index_pts),
+      fha:   num(p.fha_index_pts),
+      va:    num(p.va_index_pts),
     }));
   } else {
     pts = docs.map(d => ({
@@ -954,12 +910,6 @@ function renderAll() {
 // INIT
 // ════════════════════════════════════════════════════════════════════════════
 async function initDashboard() {
-  // Loan amount — update pricing engine and chart summary
-  $('loan-amount').addEventListener('input', e => {
-    const v = parseInt(e.target.value, 10);
-    if (v > 0) { state.loanAmount = v; renderPricingEngine(); renderChartSummary(); }
-  });
-
   // Chart view tabs
   document.querySelectorAll('.chart-view-tab').forEach(btn => {
     btn.addEventListener('click', () => {
