@@ -6,7 +6,18 @@
       "Bash(python -m scripts.master_loop)",
       "Bash(taskkill /F /FI \"IMAGENAME eq python.exe\")",
       "Bash(taskkill *)",
-      "Bash(python -c \"import ast, pathlib; ast.parse\\(pathlib.Path\\('scripts/master_loop.py'\\).read_text\\(encoding='utf-8'\\)\\); print\\('Syntax OK'\\)\")"
+      "Bash(python -c \"import ast, pathlib; ast.parse\\(pathlib.Path\\('scripts/master_loop.py'\\).read_text\\(encoding='utf-8'\\)\\); print\\('Syntax OK'\\)\")",
+      "Bash(node --check \"C:\\\\Users\\\\csthe\\\\OneDrive\\\\Documents\\\\GitHub\\\\LockIQRates\\\\netlify\\\\functions\\\\getEconCalendar.js\")",
+      "Bash(node --check \"C:\\\\Users\\\\csthe\\\\OneDrive\\\\Documents\\\\GitHub\\\\LockIQRates\\\\netlify\\\\functions\\\\getEconCalendarUpcoming.js\")",
+      "Bash(node --check \"C:\\\\Users\\\\csthe\\\\OneDrive\\\\Documents\\\\GitHub\\\\LockIQRates\\\\netlify\\\\functions\\\\getMarketData.js\")",
+      "Bash(dir C:\\\\Users\\\\csthe\\\\OneDrive\\\\Documents\\\\GitHub\\\\LockIQRates\\\\netlify\\\\functions\\\\ *)",
+      "Bash(npm install *)",
+      "Bash(node --check netlify/functions/getEconCalendar.js)",
+      "Bash(node --check netlify/functions/getEconCalendarUpcoming.js)",
+      "Bash(node --check netlify/functions/getMarketData.js)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)"
     ]
   }
 }
