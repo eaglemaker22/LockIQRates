@@ -32,8 +32,12 @@
     .nav-right { display: flex; align-items: center; gap: 1rem; }
     .nav-meta { display: flex; align-items: center; gap: 1.25rem; }
     #last-updated { font-size: 0.78rem; color: var(--muted); }
-    #refresh-indicator { width: 8px; height: 8px; border-radius: 50%; background: var(--green); display: inline-block; }
+    #refresh-indicator { width: 8px; height: 8px; border-radius: 50%; background: var(--green); display: inline-block; transition: background 0.3s; }
     #refresh-indicator.stale { background: var(--yellow); }
+    #refresh-indicator.error { background: var(--red); }
+    #countdown { font-size: 0.74rem; color: var(--muted); }
+    .market-closed-badge { font-size: 0.63rem; font-weight: 700; letter-spacing: 0.5px; padding: 0.18rem 0.55rem; border-radius: 4px; text-transform: uppercase; background: rgba(139,153,180,0.1); color: var(--muted); border: 1px solid rgba(139,153,180,0.25); }
+    .signal-badge.closed { opacity: 0.35; filter: grayscale(1); }
     #user-email { color: var(--muted); font-size: 0.8rem; }
     #sign-out-btn { background: transparent; border: 1px solid rgba(255,255,255,0.2); color: var(--muted); padding: 0.35rem 0.85rem; border-radius: 5px; font-size: 0.78rem; cursor: pointer; }
     #sign-out-btn:hover { border-color: rgba(255,255,255,0.4); color: #fff; }
@@ -163,6 +167,7 @@
       <div class="nav-meta">
         <span id="refresh-indicator"></span>
         <span id="last-updated">—</span>
+        <span id="countdown"></span>
       </div>
       <span id="user-email"></span>
       <button id="sign-out-btn">Sign out</button>
@@ -177,6 +182,7 @@
         <div style="display:flex;align-items:center;gap:.75rem;">
           <span class="section-title">LockIQ Pricing Engine</span>
           <span id="quality-badge" class="quality-badge"></span>
+          <span id="market-closed-badge" class="market-closed-badge" style="display:none">Market Closed</span>
         </div>
         <div class="engine-controls">
           <div class="ctrl-group">
@@ -275,9 +281,10 @@ const state = {
   chartView: 'today',
   historyCache: {},   // keyed by days string; each entry: { data, ts }
 };
-let chartInstance = null;
-let refreshTimer  = null;
-let _chartPoints  = [];   // current chart point objects (for tooltip dollar lookup)
+let chartInstance    = null;
+let _chartPoints     = [];     // current chart point objects (for tooltip label lookup)
+let _nextRefreshAt   = 0;      // ms timestamp when next refresh fires
+let _countdownHandle = null;   // setInterval handle for countdown ticker
 
 // ════════════════════════════════════════════════════════════════════════════
 // HELPERS
@@ -358,27 +365,99 @@ function fredDate(cache, key) {
 // DATA FETCHING
 // ════════════════════════════════════════════════════════════════════════════
 async function fetchAll() {
-  $('refresh-indicator').className = 'stale';
-
   const [indexRes, chartRes, marketRes] = await Promise.allSettled([
     fetch('/.netlify/functions/getLockIQIndex').then(r => r.ok ? r.json() : null),
     fetch('/.netlify/functions/getLockIQChart').then(r  => r.ok ? r.json() : null),
     fetch('/.netlify/functions/getMarketData').then(r  => r.ok ? r.json() : null),
   ]);
 
-  if (indexRes.status  === 'fulfilled' && indexRes.value)  state.index  = indexRes.value;
-  if (chartRes.status  === 'fulfilled' && chartRes.value)  state.chart  = chartRes.value;
-  if (marketRes.status === 'fulfilled' && marketRes.value) state.market = marketRes.value;
-  console.log('state.market:', state.market);
+  let ok = false;
+  if (indexRes.status  === 'fulfilled' && indexRes.value)  { state.index  = indexRes.value;  ok = true; }
+  if (chartRes.status  === 'fulfilled' && chartRes.value)  { state.chart  = chartRes.value;  ok = true; }
+  if (marketRes.status === 'fulfilled' && marketRes.value) { state.market = marketRes.value; ok = true; }
 
-  // Seed default anchor from first available option
   if (state.index && !state.anchorKey) {
     state.anchorKey = state.index.default_anchor_key || '0715';
   }
 
-  const now = new Date();
-  $('last-updated').textContent = 'Updated ' + now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  $('refresh-indicator').className = '';
+  return ok;
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// REFRESH ENGINE — AZ time-aware, smart selective re-render
+// ════════════════════════════════════════════════════════════════════════════
+
+// America/Phoenix = UTC-7, no DST ever
+function _azNow() {
+  return new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Phoenix' }));
+}
+
+function isMarketOpen() {
+  const az = _azNow();
+  const day = az.getDay(); // 0=Sun, 6=Sat
+  if (day === 0 || day === 6) return false;
+  const t = az.getHours() * 60 + az.getMinutes();
+  return t >= 6 * 60 && t < 17 * 60;
+}
+
+function _getRefreshInterval() {
+  const az  = _azNow();
+  const day = az.getDay();
+  const t   = az.getHours() * 60 + az.getMinutes();
+  if (day === 0 || day === 6)         return 1800; // weekends
+  if (t >= 6*60  && t < 17*60)       return 120;  // market hours: 6 AM – 5 PM
+  if (t >= 5*60  && t < 6*60)        return 300;  // pre-market:  5 AM – 6 AM
+  if (t >= 17*60 && t < 21*60)       return 600;  // after-hours: 5 PM – 9 PM
+  return 1800;                                      // overnight
+}
+
+async function doRefresh() {
+  const prevCount   = state.chart?.point_count;
+  const prevUpdated = state.chart?.last_updated;
+
+  $('refresh-indicator').className = 'stale';
+  let ok = false;
+  try { ok = await fetchAll(); } catch (_) {}
+  $('refresh-indicator').className = ok ? '' : 'error';
+
+  const ts = new Date();
+  $('last-updated').textContent = 'Updated ' + ts.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+  // Selective re-render — skip chart unless data changed
+  renderAnchorSelector();
+  renderPricingEngine();
+  renderChartSummary();
+  renderMarketProxy();
+  renderBrokerRates();
+  renderFedSnapshot();
+  renderEconCalendar();
+
+  const chartChanged = state.chart?.point_count !== prevCount ||
+                       state.chart?.last_updated !== prevUpdated;
+  if ((chartChanged || !chartInstance) && state.chartView === 'today') {
+    renderChart();
+  }
+}
+
+function _startCountdown() {
+  if (_countdownHandle) clearInterval(_countdownHandle);
+  _nextRefreshAt = Date.now() + _getRefreshInterval() * 1000;
+
+  _countdownHandle = setInterval(async () => {
+    const rem = Math.max(0, _nextRefreshAt - Date.now());
+    const m   = Math.floor(rem / 60000);
+    const s   = Math.floor((rem % 60000) / 1000);
+    const cd  = $('countdown');
+    if (cd) cd.textContent = rem > 0
+      ? `Refreshing in ${m}:${s.toString().padStart(2, '0')}`
+      : 'Updating…';
+
+    if (rem <= 0) {
+      // Schedule next interval BEFORE awaiting so counter resets immediately
+      _nextRefreshAt = Date.now() + _getRefreshInterval() * 1000;
+      await doRefresh();
+    }
+  }, 1000);
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -404,6 +483,11 @@ function renderAnchorSelector() {
 function renderPricingEngine() {
   const idx = state.index;
   if (!idx) { $('pricing-cards').innerHTML = '<p style="color:var(--muted);font-size:.85rem;">Data unavailable</p>'; return; }
+
+  // Market closed badge
+  const mktClosed = !isMarketOpen();
+  const mcb = $('market-closed-badge');
+  if (mcb) mcb.style.display = mktClosed ? '' : 'none';
 
   // Quality badge
   const qb = $('quality-badge');
@@ -438,7 +522,7 @@ function renderPricingEngine() {
       <div class="card-pts ${ptsClass}">${ptsStr}</div>
       <div class="card-pts-label">vs selected anchor</div>
       ${bpsStr ? `<div class="card-bps">${bpsStr}</div>` : ''}
-      ${sig ? `<div class="signal-badge ${sigClass}">${sig}</div>` : ''}
+      ${sig ? `<div class="signal-badge ${sigClass}${mktClosed ? ' closed' : ''}">${sig}</div>` : ''}
     </div>`;
   }).join('');
 }
@@ -499,11 +583,10 @@ const _zeroBgPlugin = {
     ctx.fillRect(left, top, right - left, zero - top);
     ctx.fillStyle = 'rgba(239,68,68,0.07)';
     ctx.fillRect(left, zero, right - left, bottom - zero);
-    ctx.strokeStyle = 'rgba(255,255,255,0.22)';
-    ctx.lineWidth = 1;
-    ctx.setLineDash([5, 5]);
-    ctx.beginPath(); ctx.moveTo(left, zero); ctx.lineTo(right, zero); ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,255,255,0.45)';
+    ctx.lineWidth = 1.5;
     ctx.setLineDash([]);
+    ctx.beginPath(); ctx.moveTo(left, zero); ctx.lineTo(right, zero); ctx.stroke();
     ctx.restore();
   },
 };
@@ -621,12 +704,18 @@ function renderChartFromPoints(pts) {
           grid:  { color: 'rgba(26,51,102,0.4)' },
         },
         y: {
+          min: -50,
+          max:  50,
           ticks: {
             color: '#8aaad4',
             font: { size: 10 },
-            callback: v => (v >= 0 ? '+' : '') + v.toFixed(1),
+            stepSize: 25,
+            callback: v => (v >= 0 ? '+' : '') + v.toFixed(0),
           },
-          grid: { color: 'rgba(26,51,102,0.4)' },
+          grid: {
+            // zero line drawn by _zeroBgPlugin; suppress it here to avoid doubling
+            color: ctx => ctx.tick.value === 0 ? 'transparent' : 'rgba(26,51,102,0.4)',
+          },
         },
       },
     },
@@ -931,15 +1020,15 @@ async function initDashboard() {
     });
   });
 
-  // Initial load
-  await fetchAll();
+  // Initial load — fetch immediately, then start time-aware countdown
+  $('refresh-indicator').className = 'stale';
+  let ok = false;
+  try { ok = await fetchAll(); } catch (_) {}
+  $('refresh-indicator').className = ok ? '' : 'error';
+  const ts = new Date();
+  $('last-updated').textContent = 'Updated ' + ts.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   renderAll();
-
-  // Auto-refresh every 60 seconds
-  refreshTimer = setInterval(async () => {
-    await fetchAll();
-    renderAll();
-  }, 60000);
+  _startCountdown();
 }
 
 // ════════════════════════════════════════════════════════════════════════════
