@@ -249,6 +249,7 @@
           <button class="cal-tab active" data-tab="today">Today</button>
           <button class="cal-tab" data-tab="tomorrow">Tomorrow</button>
           <button class="cal-tab" data-tab="week">This Week</button>
+          <button class="cal-tab" data-tab="next">Next Week</button>
         </div>
       </div>
       <div id="cal-content">Loading...</div>
@@ -666,8 +667,11 @@ function renderEconCalendar() {
   }
 
   // Pick event source by tab
-  const tomorrowStr = etDateString(1);
-  const week        = getWeekRange(0);
+  const pad = n => String(n).padStart(2, '0');
+  const tmr = new Date(); tmr.setDate(tmr.getDate() + 1);
+  const tomorrowStr = `${tmr.getFullYear()}-${pad(tmr.getMonth()+1)}-${pad(tmr.getDate())}`;
+  const thisWeek = getWeekRange(0);
+  const nextWeek = getWeekRange(1);
 
   let rawEvents;
   if (state.calTab === 'today') {
@@ -675,9 +679,12 @@ function renderEconCalendar() {
   } else if (state.calTab === 'tomorrow') {
     rawEvents = (state.market.econ_calendar_upcoming?.events || [])
       .filter(e => e.date === tomorrowStr);
+  } else if (state.calTab === 'week') {
+    rawEvents = (state.market.econ_calendar_upcoming?.events || [])
+      .filter(e => e.date >= thisWeek.start && e.date <= thisWeek.end);
   } else {
     rawEvents = (state.market.econ_calendar_upcoming?.events || [])
-      .filter(e => e.date >= week.start && e.date <= week.end);
+      .filter(e => e.date >= nextWeek.start && e.date <= nextWeek.end);
   }
 
   // Keep High, Medium, and any star_event; drop Low non-stars
