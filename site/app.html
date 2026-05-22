@@ -366,6 +366,7 @@ async function fetchAll() {
   if (indexRes.status  === 'fulfilled' && indexRes.value)  state.index  = indexRes.value;
   if (chartRes.status  === 'fulfilled' && chartRes.value)  state.chart  = chartRes.value;
   if (marketRes.status === 'fulfilled' && marketRes.value) state.market = marketRes.value;
+  console.log('state.market:', state.market);
 
   // Seed default anchor from first available option
   if (state.index && !state.anchorKey) {
@@ -696,6 +697,11 @@ function filterEvents(events, tab) {
 }
 
 function renderEconCalendar() {
+  const calToday = state.market?.econ_calendar_today;
+  if (!calToday || !calToday.events?.length) {
+    $('cal-content').innerHTML = '<p class="cal-empty">No calendar data</p>';
+    return;
+  }
   const events = filterEvents(getCalEvents(), state.calTab);
 
   let html;
