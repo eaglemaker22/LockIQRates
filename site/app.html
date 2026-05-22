@@ -388,10 +388,7 @@ async function fetchAll() {
 
   // Seed default anchor from first available option
   if (state.index && !state.anchorKey) {
-    const opts = state.index.available_anchor_options;
-    if (Array.isArray(opts) && opts.length > 0) {
-      state.anchorKey = opts[0].anchor_key;
-    }
+    state.anchorKey = state.index.default_anchor_key || '0715';
   }
 
   const now = new Date();
@@ -405,10 +402,8 @@ async function fetchAll() {
 function getAnchorData() {
   const idx = state.index;
   if (!idx) return null;
-  if (state.anchorKey && idx.anchors && idx.anchors[state.anchorKey]) {
-    return idx.anchors[state.anchorKey];
-  }
-  return idx; // fall back to root
+  const key = state.anchorKey || idx.default_anchor_key || '0715';
+  return idx.anchors?.[key] || idx.anchors?.['0715'] || null;
 }
 
 function renderAnchorSelector() {
@@ -442,9 +437,9 @@ function renderPricingEngine() {
   const mult = loan / 100000;
 
   const products = [
-    { key: 'conv', label: 'Conventional', pts: num(d?.live_conventional_index_pts ?? idx.live_conventional_index_pts), per100k: num(d?.conv_dollars_per_100k ?? idx.conv_dollars_per_100k), signal: d?.conv_signal ?? idx.conv_signal },
-    { key: 'fha',  label: 'FHA',           pts: num(d?.live_fha_index_pts  ?? idx.live_fha_index_pts),  per100k: num(d?.fha_dollars_per_100k  ?? idx.fha_dollars_per_100k),  signal: d?.fha_signal  ?? idx.fha_signal },
-    { key: 'va',   label: 'VA',            pts: num(d?.live_va_index_pts   ?? idx.live_va_index_pts),   per100k: num(d?.va_dollars_per_100k   ?? idx.va_dollars_per_100k),   signal: d?.va_signal   ?? idx.va_signal },
+    { key: 'conv', label: 'Conventional', pts: num(d?.live_conventional_index_pts), per100k: num(d?.conv_dollars_per_100k), signal: d?.conv_signal },
+    { key: 'fha',  label: 'FHA',          pts: num(d?.live_fha_index_pts),          per100k: num(d?.fha_dollars_per_100k),  signal: d?.fha_signal  },
+    { key: 'va',   label: 'VA',           pts: num(d?.live_va_index_pts),           per100k: num(d?.va_dollars_per_100k),   signal: d?.va_signal   },
   ];
 
   $('pricing-cards').innerHTML = products.map(p => {
