@@ -1,205 +1,289 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Dashboard — LockIQ Rates</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LockIQ · MBSGOAT Terminal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow+Condensed:wght@300;400;500;600;700;800&family=Barlow:wght@300;400;500&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<style>
+/* ═══════════════════════════════════════════════════════════════
+   DESIGN SYSTEM — MBSGOAT Terminal
+═══════════════════════════════════════════════════════════════ */
+:root {
+  --bg0:#020508;--bg1:#070d14;--bg2:#0b1420;--bg3:#101c2c;
+  --border:#182840;--border2:#203550;--border-hi:#2e4e6e;
+  --mono:'Share Tech Mono',monospace;
+  --cond:'Barlow Condensed',sans-serif;
+  --body:'Barlow',sans-serif;
+  --display:'Rajdhani',sans-serif;
+  --blue:#3a8be8;--blue-dim:#0c1e3c;
+  --cyan:#00deff;--cyan-mid:#00aac8;--cyan-dim:#040f18;
+  --green:#00e87a;--green-mid:#00b855;--green-dim:#021408;
+  --red:#ff3311;--red-dim:#180400;
+  --amber:#f0a800;--amber-dim:#160c00;
+  --text-pri:#c8dcea;--text-sec:#3e6882;--text-dim:#172a3a;
+  /* aliases used by helpers */
+  --muted:#3e6882;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  background:var(--bg0);color:var(--text-pri);font-family:var(--body);
+  font-size:15px;line-height:1.45;min-height:100vh;
+  background-image:radial-gradient(ellipse 70% 40% at 50% 0%,rgba(0,120,200,.07) 0%,transparent 60%);
+}
+body::before{
+  content:'';position:fixed;inset:0;
+  background-image:radial-gradient(circle,rgba(30,65,100,.08) 1px,transparent 1px);
+  background-size:32px 32px;pointer-events:none;z-index:0;
+}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:var(--bg1)}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+.topbar,.main{position:relative;z-index:1}
 
-    :root {
-      --bg:        #080f1d;
-      --card:      #0f1f3d;
-      --card-alt:  #132240;
-      --border:    #1a3366;
-      --navy:      #0f1f3d;
-      --blue:      #1a56db;
-      --gold:      #f5a623;
-      --text:      #e8edf5;
-      --muted:     #8aaad4;
-      --green:     #22c55e;
-      --red:       #ef4444;
-      --yellow:    #f59e0b;
-    }
+/* ── LOADING ── */
+#loading-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;gap:1rem;color:var(--text-sec);position:relative;z-index:10}
+.spinner{width:40px;height:40px;border:3px solid var(--border2);border-top-color:var(--cyan);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+#app-shell{display:none}
 
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+/* ── TOPBAR ── */
+.topbar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 20px;height:62px;
+  background:linear-gradient(180deg,#0e1828 0%,#070d18 100%);
+  border-bottom:1px solid var(--border2);
+  position:sticky;top:0;z-index:100;
+  box-shadow:0 2px 32px rgba(0,0,0,.7),0 1px 0 rgba(0,222,255,.05);
+}
+.topbar::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,transparent 0%,var(--cyan-mid) 25%,var(--amber) 60%,transparent 100%);
+}
+.logo-wrap{display:flex;flex-direction:column;line-height:1;gap:2px;flex-shrink:0}
+.logo-mbsgoat{font-family:var(--display);font-size:26px;font-weight:700;letter-spacing:.1em;color:#fff;line-height:1;text-shadow:0 0 28px rgba(0,222,255,.35)}
+.logo-mbsgoat span{color:var(--cyan)}
+.logo-lockiq{font-family:var(--cond);font-size:12px;font-weight:600;letter-spacing:.3em;line-height:1;text-transform:uppercase}
+.logo-lockiq .lock{color:var(--amber)}.logo-lockiq .iq{color:var(--cyan)}
+.logo-lockiq .beta{font-family:var(--mono);font-size:10px;color:var(--text-dim);letter-spacing:.14em;margin-left:6px;border:1px solid var(--text-dim);padding:1px 4px;border-radius:2px}
+.topbar-center{display:flex;align-items:center;gap:8px;flex:1;padding:0 20px}
+.topbar-right{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.status-chip{display:flex;align-items:center;gap:5px;font-family:var(--mono);font-size:12px;color:var(--text-sec);letter-spacing:.08em;white-space:nowrap}
+.status-chip.live{color:var(--green)}
+.pulse{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 7px var(--green);animation:blink 2s ease-in-out infinite;flex-shrink:0}
+.pulse.stale{background:var(--amber);box-shadow:0 0 7px var(--amber);animation:none}
+.pulse.error{background:var(--red);box-shadow:0 0 7px var(--red);animation:none}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
+.fed-chip{font-family:var(--mono);font-size:12px;color:var(--amber);background:var(--amber-dim);border:1px solid rgba(240,168,0,.2);padding:4px 10px;border-radius:4px;letter-spacing:.07em;white-space:nowrap}
+.session-badge{font-family:var(--mono);font-size:11px;font-weight:700;padding:3px 9px;border-radius:3px;letter-spacing:.12em;text-transform:uppercase;white-space:nowrap}
+.session-badge.live{background:rgba(0,232,122,.08);color:var(--green);border:1px solid rgba(0,232,122,.2)}
+.session-badge.pre{background:rgba(240,168,0,.08);color:var(--amber);border:1px solid rgba(240,168,0,.18)}
+.session-badge.after{background:var(--blue-dim);color:var(--blue);border:1px solid rgba(58,139,232,.2)}
+.session-badge.closed{background:rgba(23,42,58,.5);color:var(--text-sec);border:1px solid var(--border)}
+#user-email{font-family:var(--mono);font-size:12px;color:var(--text-sec);letter-spacing:.06em}
+#sign-out-btn{font-family:var(--mono);font-size:12px;color:var(--text-sec);background:rgba(255,255,255,.03);border:1px solid var(--border);padding:4px 10px;border-radius:3px;cursor:pointer;letter-spacing:.08em;transition:all .2s}
+#sign-out-btn:hover{color:var(--text-pri);border-color:var(--border2)}
+#countdown{font-family:var(--mono);font-size:11px;color:var(--text-dim);letter-spacing:.06em;white-space:nowrap}
 
-    /* ── NAV ── */
-    nav { background: var(--navy); display: flex; align-items: center; justify-content: space-between; padding: 0 1.5rem; height: 56px; border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; }
-    .logo { color: #fff; font-size: 1.1rem; font-weight: 700; letter-spacing: -0.5px; }
-    .logo span { color: var(--gold); }
-    .nav-right { display: flex; align-items: center; gap: 1rem; }
-    .nav-meta { display: flex; align-items: center; gap: 1.25rem; }
-    #last-updated { font-size: 0.78rem; color: var(--muted); }
-    #refresh-indicator { width: 8px; height: 8px; border-radius: 50%; background: var(--green); display: inline-block; transition: background 0.3s; }
-    #refresh-indicator.stale { background: var(--yellow); }
-    #refresh-indicator.error { background: var(--red); }
-    #countdown { font-size: 0.74rem; color: var(--muted); }
-    .market-closed-badge { font-size: 0.63rem; font-weight: 700; letter-spacing: 0.5px; padding: 0.18rem 0.55rem; border-radius: 4px; text-transform: uppercase; background: rgba(139,153,180,0.1); color: var(--muted); border: 1px solid rgba(139,153,180,0.25); }
-    .signal-badge.closed { opacity: 0.35; filter: grayscale(1); }
-    #user-email { color: var(--muted); font-size: 0.8rem; }
-    #sign-out-btn { background: transparent; border: 1px solid rgba(255,255,255,0.2); color: var(--muted); padding: 0.35rem 0.85rem; border-radius: 5px; font-size: 0.78rem; cursor: pointer; }
-    #sign-out-btn:hover { border-color: rgba(255,255,255,0.4); color: #fff; }
+/* ── ANCHOR SELECTOR ── */
+.tf-label{font-family:var(--mono);font-size:11px;color:var(--text-dim);letter-spacing:.14em;text-transform:uppercase;white-space:nowrap}
+#anchor-select{font-family:var(--mono);font-size:12px;color:var(--text-pri);background:var(--bg2);border:1px solid var(--border);padding:5px 10px;border-radius:4px;cursor:pointer;letter-spacing:.07em;outline:none;max-width:220px}
+#anchor-select:focus{border-color:var(--amber)}
 
-    /* ── LOADING ── */
-    #loading-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; gap: 1rem; color: var(--muted); }
-    .spinner { width: 40px; height: 40px; border: 3px solid #1a3366; border-top-color: var(--blue); border-radius: 50%; animation: spin 0.8s linear infinite; }
-    @keyframes spin { to { transform: rotate(360deg); } }
+/* ── MAIN LAYOUT ── */
+.main{padding:10px 18px 40px;display:flex;flex-direction:column;gap:10px}
+.sec-header{display:flex;align-items:center;margin-bottom:8px;gap:10px}
+.sec-title{font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:.32em;color:var(--cyan);text-transform:uppercase;white-space:nowrap}
+.sec-line{flex:1;height:1px;background:linear-gradient(90deg,var(--border2),transparent)}
+.sec-meta{font-family:var(--mono);font-size:11px;color:var(--text-dim);letter-spacing:.1em;white-space:nowrap}
 
-    /* ── APP SHELL ── */
-    #app-shell { display: none; }
-    .dashboard { max-width: 1400px; margin: 0 auto; padding: 1.25rem 1.5rem 3rem; display: flex; flex-direction: column; gap: 1.25rem; }
+/* ── QUALITY BADGE ── */
+.quality-badge{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.08em;padding:2px 8px;border-radius:3px;text-transform:uppercase}
+.quality-ok{background:rgba(0,232,122,.08);color:var(--green);border:1px solid rgba(0,232,122,.2)}
+.quality-warn{background:var(--amber-dim);color:var(--amber);border:1px solid rgba(240,168,0,.2)}
+.quality-err{background:var(--red-dim);color:var(--red);border:1px solid rgba(255,51,17,.2)}
+.mkt-closed-badge{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.1em;padding:2px 9px;border-radius:3px;text-transform:uppercase;background:rgba(23,42,58,.5);color:var(--text-sec);border:1px solid var(--border)}
 
-    /* ── SECTION WRAPPER ── */
-    .dash-section { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem 1.5rem; }
-    .section-hd { display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 1.1rem; }
-    .section-title { font-size: 0.7rem; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); }
+/* ── DIAL CARDS (pricing + market proxy) ── */
+.dials-grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.dial-card{
+  background:linear-gradient(170deg,#0c1826 0%,#070d16 100%);
+  border:1px solid var(--border2);border-radius:10px;
+  padding:14px 14px 12px;
+  display:flex;flex-direction:column;
+  position:relative;overflow:hidden;
+  box-shadow:0 4px 20px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.03);
+  transition:border-color .25s;
+}
+.dial-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;border-radius:10px 10px 0 0}
+.dial-card.cyan::before{background:linear-gradient(90deg,transparent,var(--cyan-mid),transparent)}
+.dial-card.amber::before{background:linear-gradient(90deg,transparent,var(--amber),transparent)}
+.dial-card.green::before{background:linear-gradient(90deg,transparent,var(--green-mid),transparent)}
+.dial-card.blue::before{background:linear-gradient(90deg,transparent,var(--blue),transparent)}
+.dial-card:hover{border-color:var(--border-hi)}
+.dial-top-label{font-family:var(--mono);font-size:12px;letter-spacing:.2em;color:var(--text-sec);text-transform:uppercase;margin-bottom:6px}
+.dial-delta-main{font-family:var(--display);font-size:44px;font-weight:600;line-height:1;letter-spacing:.02em;transition:color .35s;text-shadow:0 0 24px currentColor}
+.dial-price-sub{font-family:var(--mono);font-size:14px;color:var(--text-sec);margin-top:5px;letter-spacing:.05em}
+.dial-ref-row{display:flex;justify-content:space-between;align-items:center;width:100%;padding:7px 0 0;border-top:1px solid var(--border);margin-top:8px}
+.dial-ref-lbl{font-family:var(--mono);font-size:11px;color:var(--text-dim);letter-spacing:.1em}
+.dial-ref-val{font-family:var(--mono);font-size:13px;color:var(--text-sec)}
 
-    /* ── CONTROLS (engine top bar) ── */
-    .engine-controls { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
-    .ctrl-group { display: flex; flex-direction: column; gap: 0.2rem; }
-    .ctrl-label { font-size: 0.68rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
-    select, input[type="number"] { background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 0.4rem 0.65rem; border-radius: 6px; font-size: 0.85rem; font-family: inherit; }
-    select:focus, input:focus { outline: none; border-color: var(--blue); }
-    .quality-badge { font-size: 0.68rem; font-weight: 700; letter-spacing: 0.5px; padding: 0.25rem 0.6rem; border-radius: 4px; text-transform: uppercase; }
-    .quality-ok { background: rgba(34,197,94,0.15); color: var(--green); border: 1px solid rgba(34,197,94,0.3); }
-    .quality-warn { background: rgba(245,158,11,0.15); color: var(--yellow); border: 1px solid rgba(245,158,11,0.3); }
-    .quality-err { background: rgba(239,68,68,0.15); color: var(--red); border: 1px solid rgba(239,68,68,0.3); }
+/* ── SIGNAL BADGES ── */
+.signal-badge{display:inline-flex;align-items:center;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.1em;padding:2px 8px;border-radius:3px;width:fit-content;margin-top:6px}
+.signal-better{background:rgba(0,232,122,.08);color:var(--green);border:1px solid rgba(0,232,122,.2)}
+.signal-worse{background:var(--red-dim);color:var(--red);border:1px solid rgba(255,51,17,.2)}
+.signal-flat{background:rgba(23,42,58,.5);color:var(--text-sec);border:1px solid var(--border)}
+.signal-badge.closed{opacity:.3;filter:grayscale(1)}
+.pos{color:var(--green)}
+.neg{color:var(--red)}
+.neu{color:var(--text-sec)}
 
-    /* ── PRICING CARDS ── */
-    .pricing-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
-    .pricing-card { background: var(--card-alt); border: 1px solid var(--border); border-radius: 10px; padding: 1.25rem 1.5rem; display: flex; flex-direction: column; gap: 0.5rem; }
-    .card-product { font-size: 0.68rem; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); }
-    .card-pts { font-size: 2.6rem; font-weight: 800; line-height: 1; letter-spacing: -1px; }
-    .card-pts.positive { color: var(--green); }
-    .card-pts.negative { color: var(--red); }
-    .card-pts.neutral  { color: var(--muted); }
-    .card-pts-label { font-size: 0.72rem; color: var(--muted); }
-    .card-bps { font-size: 0.82rem; color: var(--muted); }
-    .signal-badge { display: inline-flex; align-items: center; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.5px; padding: 0.2rem 0.55rem; border-radius: 4px; width: fit-content; margin-top: 0.25rem; }
-    .signal-better { background: rgba(34,197,94,0.15); color: var(--green); border: 1px solid rgba(34,197,94,0.3); }
-    .signal-worse  { background: rgba(239,68,68,0.15);  color: var(--red);   border: 1px solid rgba(239,68,68,0.3); }
-    .signal-flat   { background: rgba(139,153,180,0.15); color: var(--muted); border: 1px solid rgba(139,153,180,0.3); }
+/* ── CHART BLOCK ── */
+.chart-block{background:var(--bg1);border:1px solid var(--border2);border-radius:10px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,.3)}
+.chart-block-header{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:linear-gradient(180deg,var(--bg3) 0%,var(--bg2) 100%);border-bottom:1px solid var(--border2);flex-wrap:wrap;gap:8px}
+.chart-block-title{font-family:var(--display);font-size:18px;font-weight:600;letter-spacing:.14em;color:#fff;text-transform:uppercase}
+.chart-block-meta{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.chart-view-tabs{display:flex;gap:4px}
+.chart-view-tab{font-family:var(--mono);font-size:12px;letter-spacing:.1em;color:var(--text-sec);padding:4px 10px;border:1px solid var(--border);border-radius:3px;cursor:pointer;background:transparent;text-transform:uppercase;transition:all .18s}
+.chart-view-tab:hover{color:var(--text-pri);border-color:var(--border2)}
+.chart-view-tab.active{color:var(--amber);border-color:rgba(240,168,0,.3);background:rgba(240,168,0,.07);box-shadow:0 0 10px rgba(240,168,0,.08)}
+.chart-summary-bar{display:flex;align-items:center;gap:16px;padding:8px 16px;background:var(--bg2);border-bottom:1px solid var(--border);flex-wrap:wrap}
+.chart-sum-lbl{font-family:var(--mono);font-size:11px;color:var(--text-dim);letter-spacing:.12em;text-transform:uppercase}
+.chart-sum-val{font-family:var(--display);font-size:22px;font-weight:600;line-height:1;text-shadow:0 0 18px currentColor}
+.chart-sum-anchor{font-family:var(--mono);font-size:12px;color:var(--text-sec);margin-left:auto}
+.chart-wrap{position:relative;height:280px;padding:8px}
 
-    /* ── CHART ── */
-    .chart-view-tabs { display: flex; gap: 0.25rem; }
-    .chart-view-tab { background: transparent; border: 1px solid var(--border); color: var(--muted); padding: 0.3rem 0.75rem; border-radius: 6px; font-size: 0.75rem; cursor: pointer; font-family: inherit; transition: background 0.15s; }
-    .chart-view-tab.active { background: var(--blue); border-color: var(--blue); color: #fff; }
-    .chart-summary { display: flex; align-items: flex-start; gap: 2rem; padding: 0.6rem 0 0.9rem; border-bottom: 1px solid var(--border); margin-bottom: 0.85rem; flex-wrap: wrap; row-gap: 0.5rem; }
-    .chart-sum-item { display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; }
-    .chart-sum-label { font-size: 0.63rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); }
-    .chart-sum-value { font-size: 1.05rem; font-weight: 700; line-height: 1.2; }
-    .chart-sum-sub   { font-size: 0.74rem; color: var(--muted); }
-    .chart-wrap { position: relative; height: 280px; }
+/* ── RATE PANELS ── */
+.rates-3col{display:grid;grid-template-columns:1fr 1fr 0.55fr;gap:10px}
+.rate-panel{background:var(--bg1);border:1px solid var(--border2);border-radius:10px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,.3);display:flex;flex-direction:column}
+.rate-panel-header{padding:10px 16px;background:linear-gradient(180deg,var(--bg3) 0%,var(--bg2) 100%);border-bottom:1px solid var(--border2);position:relative}
+.rate-panel-header::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;border-radius:10px 10px 0 0}
+.rate-panel.bpi .rate-panel-header::before{background:linear-gradient(90deg,transparent,var(--cyan-mid),transparent)}
+.rate-panel.mcr .rate-panel-header::before{background:linear-gradient(90deg,transparent,var(--amber),transparent)}
+.rate-panel.freddie .rate-panel-header::before{background:linear-gradient(90deg,transparent,var(--blue),transparent)}
+.rate-panel-source{font-family:var(--display);font-size:18px;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
+.rate-panel.bpi .rate-panel-source{color:var(--cyan)}
+.rate-panel.mcr .rate-panel-source{color:var(--amber)}
+.rate-panel.freddie .rate-panel-source{color:var(--blue)}
+.rate-panel-meta{font-family:var(--mono);font-size:11px;color:var(--text-dim);letter-spacing:.05em;margin-top:2px;line-height:1.5}
+.rate-panel-info{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+.rate-panel-body{flex:1}
+.rate-row{padding:9px 14px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:2px;cursor:pointer;transition:background .15s}
+.rate-row:last-child{border-bottom:none}
+.rate-row:hover{background:rgba(255,255,255,.02)}
+.rate-row-product{font-family:var(--mono);font-size:12px;letter-spacing:.16em;color:var(--text-sec);text-transform:uppercase}
+.rate-row-main{display:flex;align-items:baseline;gap:5px}
+.rate-row-val{font-family:var(--display);font-size:34px;font-weight:600;line-height:1;color:#fff}
+.rate-row-pct{font-family:var(--display);font-size:18px;font-weight:400;color:var(--text-sec)}
+.rate-row-change{font-family:var(--mono);font-size:13px;letter-spacing:.04em}
+.rate-row-change.pos{color:var(--green)}.rate-row-change.neg{color:var(--red)}.rate-row-change.neu{color:var(--text-sec)}
+.rate-row-sub{font-family:var(--mono);font-size:11px;color:var(--text-dim);letter-spacing:.04em}
+.rate-panel.freddie .rate-row-val{font-size:38px}
+.rate-panel.freddie .rate-row{padding:14px 14px}
+.rate-no-data{font-family:var(--mono);font-size:12px;color:var(--text-dim);padding:16px;letter-spacing:.08em}
 
-    /* ── MARKET TILES ── */
-    .market-tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
-    .market-tile { background: var(--card-alt); border: 1px solid var(--border); border-radius: 10px; padding: 1rem 1.25rem; }
-    .tile-label { font-size: 0.68rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-bottom: 0.5rem; }
-    .tile-value { font-size: 1.6rem; font-weight: 700; letter-spacing: -0.5px; }
-    .tile-change { font-size: 0.82rem; font-weight: 600; margin-top: 0.2rem; }
-    .pos { color: var(--green); }
-    .neg { color: var(--red); }
-    .neu { color: var(--muted); }
+/* ── ECON CALENDAR ── */
+.econ-block{background:var(--bg1);border:1px solid var(--border2);border-radius:10px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,.3)}
+.block-header{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:linear-gradient(180deg,var(--bg3) 0%,var(--bg2) 100%);border-bottom:1px solid var(--border2);flex-wrap:wrap;gap:6px}
+.block-title{font-family:var(--display);font-size:17px;font-weight:600;letter-spacing:.14em;color:#fff;text-transform:uppercase}
+.cal-tabs{display:flex;gap:4px}
+.cal-tab{font-family:var(--mono);font-size:11px;letter-spacing:.1em;color:var(--text-sec);padding:4px 9px;border:1px solid var(--border);border-radius:3px;cursor:pointer;background:transparent;text-transform:uppercase;transition:all .18s}
+.cal-tab:hover{color:var(--text-pri);border-color:var(--border2)}
+.cal-tab.active{color:var(--cyan);border-color:rgba(0,222,255,.25);background:rgba(0,222,255,.05)}
+.econ-row{display:grid;grid-template-columns:70px 1fr 70px 60px;gap:8px;align-items:center;padding:8px 16px;border-bottom:1px solid var(--border);transition:background .15s}
+.econ-row:last-child{border-bottom:none}
+.econ-row:hover{background:var(--bg2)}
+.econ-date{font-family:var(--mono);font-size:13px;color:var(--text-sec)}
+.econ-event{font-family:var(--body);font-size:14px;color:var(--text-pri)}
+.econ-prev{font-family:var(--mono);font-size:12px;color:var(--text-dim);text-align:right}
+.econ-impact{font-family:var(--mono);font-size:11px;font-weight:700;padding:2px 6px;border-radius:3px;text-align:center;letter-spacing:.07em}
+.impact-high{background:#1c0402;color:#ff4422;border:1px solid #4a0e08}
+.impact-med{background:#160e00;color:var(--amber);border:1px solid #3a2808}
+.impact-low{background:#040a14;color:#2e5a80;border:1px solid #0c1e34}
+.cal-empty{font-family:var(--mono);font-size:12px;color:var(--text-dim);padding:16px;letter-spacing:.08em}
 
-    /* ── TWO COLUMN LAYOUT ── */
-    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
+/* ── FED SNAPSHOT ── */
+.fed-strip{display:flex;align-items:center;gap:10px;padding:6px 16px 8px;border-top:1px solid var(--border);background:var(--bg2);flex-wrap:wrap}
+.fed-strip-item{display:flex;align-items:center;gap:7px}
+.fed-strip-lbl{font-family:var(--mono);font-size:11px;color:var(--text-dim);letter-spacing:.1em;text-transform:uppercase}
+.fed-strip-val{font-family:var(--display);font-size:18px;font-weight:600;color:var(--text-pri);letter-spacing:.06em}
+.fed-strip-sep{width:1px;height:20px;background:var(--border);margin:0 2px}
 
-    /* ── RATE TABLES ── */
-    .rate-panel-title { font-size: 0.72rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.75rem; }
-    .rate-table { width: 100%; border-collapse: collapse; }
-    .rate-table th { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); text-align: left; padding: 0.3rem 0; border-bottom: 1px solid var(--border); }
-    .rate-table td { font-size: 0.88rem; padding: 0.45rem 0; border-bottom: 1px solid rgba(26,51,102,0.5); }
-    .rate-table td:last-child { text-align: right; }
-    .rate-table .product-cell { color: var(--muted); font-size: 0.8rem; }
-    .as-of-note { font-size: 0.68rem; color: var(--muted); margin-top: 0.6rem; }
-    .two-panels   { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
-    .three-panels { display: grid; grid-template-columns: repeat(3,1fr); gap: 1.5rem; }
+/* ── MODAL ── */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.84);z-index:200;align-items:center;justify-content:center;backdrop-filter:blur(6px)}
+.modal-overlay.open{display:flex}
+.modal-box{background:linear-gradient(160deg,var(--bg3) 0%,var(--bg2) 100%);border:1px solid var(--border2);border-radius:12px;max-width:560px;width:94%;padding:28px;position:relative;box-shadow:0 28px 70px rgba(0,0,0,.75)}
+.modal-box::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--cyan-mid),transparent);border-radius:12px 12px 0 0}
+.modal-close{position:absolute;top:12px;right:14px;font-family:var(--mono);font-size:12px;color:var(--text-sec);cursor:pointer;background:rgba(255,255,255,.04);border:1px solid var(--border);padding:3px 9px;border-radius:3px;letter-spacing:.1em;transition:all .2s}
+.modal-close:hover{color:#fff;border-color:var(--border2)}
+.modal-title{font-family:var(--display);font-size:22px;font-weight:600;color:#fff;letter-spacing:.1em;margin-bottom:3px;text-transform:uppercase}
+.modal-sub{font-family:var(--mono);font-size:12px;color:var(--cyan);letter-spacing:.14em;text-transform:uppercase;margin-bottom:16px}
+.modal-body{font-family:var(--body);font-size:14px;color:var(--text-sec);line-height:1.7}
+.modal-body strong{color:var(--text-pri)}
+.modal-range-btns{display:flex;gap:6px;margin-bottom:12px}
+.modal-range-btn{font-family:var(--mono);font-size:12px;color:var(--text-sec);padding:4px 12px;border:1px solid var(--border);border-radius:3px;cursor:pointer;background:transparent;letter-spacing:.08em;transition:all .18s}
+.modal-range-btn.active{color:var(--amber);border-color:rgba(240,168,0,.3);background:rgba(240,168,0,.07)}
+.modal-chart-wrap{height:180px;margin-top:10px;position:relative}
 
-    /* ── FED SNAPSHOT ── */
-    .fed-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-    .fed-item { background: var(--card-alt); border: 1px solid var(--border); border-radius: 8px; padding: 0.85rem 1rem; }
-    .fed-label { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); margin-bottom: 0.3rem; }
-    .fed-value { font-size: 1.4rem; font-weight: 700; }
-
-    /* ── ECON CALENDAR ── */
-    .cal-tabs { display: flex; gap: 0.25rem; margin-bottom: 1rem; }
-    .cal-tab { background: transparent; border: 1px solid var(--border); color: var(--muted); padding: 0.35rem 0.85rem; border-radius: 6px; font-size: 0.78rem; cursor: pointer; font-family: inherit; }
-    .cal-tab.active { background: var(--blue); border-color: var(--blue); color: #fff; }
-    .cal-table { width: 100%; border-collapse: collapse; }
-    .cal-table th { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); text-align: left; padding: 0.3rem 0.5rem; border-bottom: 1px solid var(--border); }
-    .cal-table td { font-size: 0.82rem; padding: 0.5rem 0.5rem; border-bottom: 1px solid rgba(26,51,102,0.4); vertical-align: middle; }
-    .impact-high   { display: inline-block; background: rgba(239,68,68,0.15); color: var(--red); border: 1px solid rgba(239,68,68,0.3); font-size: 0.65rem; font-weight: 700; letter-spacing: 0.5px; padding: 0.15rem 0.45rem; border-radius: 4px; text-transform: uppercase; }
-    .impact-medium { display: inline-block; background: rgba(245,158,11,0.15); color: var(--yellow); border: 1px solid rgba(245,158,11,0.3); font-size: 0.65rem; font-weight: 700; letter-spacing: 0.5px; padding: 0.15rem 0.45rem; border-radius: 4px; text-transform: uppercase; }
-    .cal-empty { color: var(--muted); font-size: 0.85rem; padding: 1rem 0.5rem; }
-
-    /* ── RESPONSIVE ── */
-    @media (max-width: 900px) {
-      .pricing-cards { grid-template-columns: 1fr; }
-      .market-tiles  { grid-template-columns: 1fr; }
-      .two-col       { grid-template-columns: 1fr; }
-      .two-panels    { grid-template-columns: 1fr; }
-      .three-panels  { grid-template-columns: 1fr; }
-      .fed-grid      { grid-template-columns: 1fr 1fr; }
-    }
-    @media (max-width: 600px) {
-      .engine-controls { flex-direction: column; align-items: flex-start; }
-      .nav-meta { display: none; }
-    }
-  </style>
+/* ── RESPONSIVE ── */
+@media(max-width:1000px){.rates-3col{grid-template-columns:1fr;}.dials-grid-3{grid-template-columns:1fr}}
+@media(max-width:700px){.topbar-center{display:none}.topbar{padding:0 12px}}
+</style>
 </head>
 <body>
 
-<!-- ── LOADING ── -->
+<!-- LOADING -->
 <div id="loading-screen">
   <div class="spinner"></div>
-  <span>Loading dashboard&hellip;</span>
+  <div style="font-family:var(--mono);font-size:12px;letter-spacing:.2em;color:var(--text-dim)">INITIALIZING LOCKIQ…</div>
 </div>
 
-<!-- ── APP SHELL ── -->
+<!-- APP SHELL -->
 <div id="app-shell">
 
-  <!-- NAV -->
-  <nav>
-    <div class="logo">Lock<span>IQ</span> Rates</div>
-    <div class="nav-right">
-      <div class="nav-meta">
-        <span id="refresh-indicator"></span>
-        <span id="last-updated">—</span>
-        <span id="countdown"></span>
-      </div>
-      <span id="user-email"></span>
-      <button id="sign-out-btn">Sign out</button>
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="logo-wrap">
+    <div class="logo-mbsgoat">MBS<span>GOAT</span></div>
+    <div class="logo-lockiq"><span class="lock">Lock</span><span class="iq">IQ</span><span class="beta">BETA</span></div>
+  </div>
+  <div class="topbar-center">
+    <span class="tf-label">Δ From:</span>
+    <select id="anchor-select"><option value="">— loading —</option></select>
+    <span id="quality-badge" class="quality-badge" style="margin-left:4px"></span>
+    <span id="market-closed-badge" class="mkt-closed-badge" style="display:none">Market Closed</span>
+  </div>
+  <div class="topbar-right">
+    <span class="status-chip"><div class="pulse" id="refresh-indicator"></div><span id="last-updated" style="font-family:var(--mono);font-size:12px">—</span></span>
+    <span id="countdown" class="status-chip" style="font-size:11px;color:var(--text-dim)"></span>
+    <span id="session-badge" class="session-badge closed">CLOSED</span>
+    <span id="clock-el" class="status-chip" style="font-size:12px;color:var(--text-sec)">--:--:-- AZ</span>
+    <div id="fed-chip" class="fed-chip" style="display:none"></div>
+    <span id="user-email"></span>
+    <button id="sign-out-btn">SIGN OUT</button>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- SECTION 1: LOCKIQ PRICING ENGINE -->
+  <div>
+    <div class="sec-header">
+      <div class="sec-title">LockIQ Pricing Engine</div>
+      <div class="sec-line"></div>
     </div>
-  </nav>
+    <div class="dials-grid-3" id="pricing-cards"></div>
+  </div>
 
-  <div class="dashboard">
-
-    <!-- ── SECTION 1: LOCKIQ PRICING ENGINE ── -->
-    <div class="dash-section" id="section-engine">
-      <div class="section-hd">
-        <div style="display:flex;align-items:center;gap:.75rem;">
-          <span class="section-title">LockIQ Pricing Engine</span>
-          <span id="quality-badge" class="quality-badge"></span>
-          <span id="market-closed-badge" class="market-closed-badge" style="display:none">Market Closed</span>
-        </div>
-        <div class="engine-controls">
-          <div class="ctrl-group">
-            <span class="ctrl-label">Compare vs</span>
-            <select id="anchor-select"><option value="">— loading —</option></select>
-          </div>
-        </div>
-      </div>
-      <div class="pricing-cards" id="pricing-cards">
-        <!-- rendered by JS -->
-      </div>
-    </div>
-
-    <!-- ── SECTION 2: CHART ── -->
-    <div class="dash-section" id="section-chart">
-      <div class="section-hd">
-        <span class="section-title">LockIQ Pricing Index</span>
+  <!-- SECTION 2: INTRADAY CHART -->
+  <div class="chart-block" id="section-chart">
+    <div class="chart-block-header">
+      <div class="chart-block-title">Pricing Index</div>
+      <div class="chart-block-meta">
+        <div id="chart-summary"></div>
         <div class="chart-view-tabs" id="chart-view-tabs">
           <button class="chart-view-tab active" data-view="today">Today</button>
           <button class="chart-view-tab" data-view="yesterday">Yesterday</button>
@@ -207,123 +291,119 @@
           <button class="chart-view-tab" data-view="30d">30 Days</button>
         </div>
       </div>
-      <div id="chart-summary"></div>
-      <div class="chart-wrap">
-        <canvas id="lockiq-chart-canvas"></canvas>
+    </div>
+    <div class="chart-wrap"><canvas id="lockiq-chart-canvas"></canvas></div>
+  </div>
+
+  <!-- SECTION 3: MARKET PROXY -->
+  <div>
+    <div class="sec-header">
+      <div class="sec-title">Market Proxy</div>
+      <div class="sec-line"></div>
+    </div>
+    <div class="dials-grid-3" id="market-tiles"></div>
+  </div>
+
+  <!-- SECTION 4: BROKER RATES -->
+  <div>
+    <div class="sec-header">
+      <div class="sec-title">Mortgage Rates</div>
+      <div class="sec-line"></div>
+    </div>
+    <div class="rates-3col" id="broker-panels"></div>
+  </div>
+
+  <!-- SECTION 5: ECON CALENDAR -->
+  <div class="econ-block">
+    <div class="block-header">
+      <div class="block-title">Economic Calendar</div>
+      <div class="cal-tabs" id="cal-tabs">
+        <button class="cal-tab active" data-tab="today">Today</button>
+        <button class="cal-tab" data-tab="tomorrow">Tomorrow</button>
+        <button class="cal-tab" data-tab="week">This Week</button>
+        <button class="cal-tab" data-tab="next">Next Week</button>
       </div>
     </div>
+    <div id="cal-content"><div class="cal-empty">Loading…</div></div>
+    <div class="fed-strip" id="fed-grid"></div>
+  </div>
 
-    <!-- ── SECTION 3: MARKET PROXY ── -->
-    <div class="dash-section" id="section-market">
-      <div class="section-hd">
-        <span class="section-title">Live Market Proxy Indicators</span>
-      </div>
-      <div class="market-tiles" id="market-tiles">
-        <!-- rendered by JS -->
-      </div>
-    </div>
-
-    <!-- ── SECTIONS 4 + 5 side by side ── -->
-    <div class="two-col">
-
-      <!-- SECTION 4: BROKER RATES -->
-      <div class="dash-section" id="section-rates">
-        <div class="section-hd" style="margin-bottom:.75rem;">
-          <span class="section-title">Broker Rates</span>
-        </div>
-        <div class="two-panels" id="broker-panels">
-          <!-- rendered by JS -->
-        </div>
-      </div>
-
-      <!-- SECTION 5: FED SNAPSHOT -->
-      <div class="dash-section" id="section-fed">
-        <div class="section-hd" style="margin-bottom:.75rem;">
-          <span class="section-title">Fed Snapshot</span>
-        </div>
-        <div class="fed-grid" id="fed-grid">
-          <!-- rendered by JS -->
-        </div>
-      </div>
-
-    </div>
-
-    <!-- ── SECTION 6: ECONOMIC CALENDAR ── -->
-    <div class="dash-section" id="section-calendar">
-      <div class="section-hd" style="margin-bottom:.75rem;">
-        <span class="section-title">Economic Calendar</span>
-        <div class="cal-tabs" id="cal-tabs">
-          <button class="cal-tab active" data-tab="today">Today</button>
-          <button class="cal-tab" data-tab="tomorrow">Tomorrow</button>
-          <button class="cal-tab" data-tab="week">This Week</button>
-          <button class="cal-tab" data-tab="next">Next Week</button>
-        </div>
-      </div>
-      <div id="cal-content">Loading...</div>
-    </div>
-
-  </div><!-- /.dashboard -->
+</div><!-- /.main -->
 </div><!-- /#app-shell -->
+
+<!-- RATE HISTORY MODAL -->
+<div class="modal-overlay" id="rate-modal" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal-box">
+    <button class="modal-close" onclick="document.getElementById('rate-modal').classList.remove('open')">✕ CLOSE</button>
+    <div class="modal-title" id="modal-title"></div>
+    <div class="modal-sub" id="modal-sub"></div>
+    <div class="modal-range-btns">
+      <button class="modal-range-btn active" data-range="1M" onclick="setModalRange(this,'1M')">1M</button>
+      <button class="modal-range-btn" data-range="3M" onclick="setModalRange(this,'3M')">3M</button>
+      <button class="modal-range-btn" data-range="6M" onclick="setModalRange(this,'6M')">6M</button>
+    </div>
+    <div class="modal-chart-wrap"><canvas id="modal-chart-canvas"></canvas></div>
+    <div class="modal-body" id="modal-body"></div>
+  </div>
+</div>
 
 <!-- Clerk JS -->
 <script src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js"></script>
 
 <script>
-// ════════════════════════════════════════════════════════════════════════════
-// DASHBOARD STATE
-// ════════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════════
 const state = {
-  index:   null,   // getLockIQIndex response
-  chart:   null,   // getLockIQChart response
-  market:  null,   // getMarketData response
-  anchorKey: null, // currently selected anchor
+  index:   null,
+  chart:   null,
+  market:  null,
+  anchorKey: null,
   calTab: 'today',
   chartView: 'today',
-  historyCache: {},   // keyed by days string; each entry: { data, ts }
+  historyCache: {},
 };
 let chartInstance    = null;
-let _chartPoints     = [];     // current chart point objects (for tooltip label lookup)
-let _nextRefreshAt   = 0;      // ms timestamp when next refresh fires
-let _countdownHandle = null;   // setInterval handle for countdown ticker
+let _chartPoints     = [];
+let _nextRefreshAt   = 0;
+let _countdownHandle = null;
+let _modalChart      = null;
 
-// ════════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════
 // HELPERS
-// ════════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════
 const $ = id => document.getElementById(id);
 const num = v => { const n = parseFloat(v); return isFinite(n) ? n : null; };
-const fmt  = (n, dec=2) => n == null ? '—' : n.toFixed(dec);
+const fmt = (n, dec=2) => n == null ? '—' : n.toFixed(dec);
 const fmtRate = n => n == null ? '—' : n.toFixed(3) + '%';
 const sign = n => n == null ? '' : n > 0 ? '+' : '';
 
-function dirClass(n, invertColors) {
+function dirClass(n, inv) {
   if (n == null) return 'neu';
-  if (invertColors) return n > 0 ? 'neg' : n < 0 ? 'pos' : 'neu';
+  if (inv) return n > 0 ? 'neg' : n < 0 ? 'pos' : 'neu';
   return n > 0 ? 'pos' : n < 0 ? 'neg' : 'neu';
 }
+function dirColor(n, inv) {
+  const c = dirClass(n, inv);
+  return c === 'pos' ? 'var(--green)' : c === 'neg' ? 'var(--red)' : 'var(--text-sec)';
+}
 
-// ── Date utilities ────────────────────────────────────────────────────────
 function etDateString(offsetDays = 0) {
-  // Approximates Eastern Time (UTC-4 during DST, UTC-5 standard)
   const now = new Date();
-  const etOffset = -5 * 60; // conservative; close enough for calendar filtering
-  const et = new Date(now.getTime() + (now.getTimezoneOffset() + etOffset) * 60000);
+  const et = new Date(now.getTime() + (now.getTimezoneOffset() + (-5*60)) * 60000);
   et.setDate(et.getDate() + offsetDays);
   return et.toISOString().slice(0, 10);
 }
-
 function getWeekRange(weekOffset = 0) {
   const now = new Date();
-  const etOffset = -5 * 60;
-  const et = new Date(now.getTime() + (now.getTimezoneOffset() + etOffset) * 60000);
-  const day = et.getDay(); // 0=Sun
+  const et = new Date(now.getTime() + (now.getTimezoneOffset() + (-5*60)) * 60000);
+  const day = et.getDay();
   const monday = new Date(et); monday.setDate(et.getDate() - (day === 0 ? 6 : day - 1) + weekOffset * 7);
   const friday = new Date(monday); friday.setDate(monday.getDate() + 4);
   return { start: monday.toISOString().slice(0, 10), end: friday.toISOString().slice(0, 10) };
 }
-
 function formatTime12(timeStr) {
   if (!timeStr) return '—';
-  // Handle "HH:MM" or "HH:MM:SS"
   const parts = timeStr.split(':');
   if (parts.length < 2) return timeStr;
   let h = parseInt(parts[0], 10);
@@ -333,7 +413,6 @@ function formatTime12(timeStr) {
   return `${h}:${m} ${ampm}`;
 }
 
-// ── FRED value extractor ──────────────────────────────────────────────────
 function fredVal(cache, key) {
   if (!cache) return null;
   const keys = [key, key.toLowerCase(), key.toUpperCase()];
@@ -346,14 +425,12 @@ function fredVal(cache, key) {
   }
   return null;
 }
-
 function fredChange(cache, key) {
   if (!cache) return null;
   const v = cache[key] ?? cache[key.toLowerCase()] ?? cache[key.toUpperCase()];
   if (v && typeof v === 'object' && v.change != null) return num(v.change);
   return null;
 }
-
 function fredDate(cache, key) {
   if (!cache) return null;
   const v = cache[key] ?? cache[key.toLowerCase()] ?? cache[key.toUpperCase()];
@@ -361,69 +438,80 @@ function fredDate(cache, key) {
   return null;
 }
 
-// ════════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════
 // DATA FETCHING
-// ════════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════
 async function fetchAll() {
   const [indexRes, chartRes, marketRes] = await Promise.allSettled([
     fetch('/.netlify/functions/getLockIQIndex').then(r => r.ok ? r.json() : null),
     fetch('/.netlify/functions/getLockIQChart').then(r  => r.ok ? r.json() : null),
     fetch('/.netlify/functions/getMarketData').then(r  => r.ok ? r.json() : null),
   ]);
-
   let ok = false;
   if (indexRes.status  === 'fulfilled' && indexRes.value)  { state.index  = indexRes.value;  ok = true; }
   if (chartRes.status  === 'fulfilled' && chartRes.value)  { state.chart  = chartRes.value;  ok = true; }
   if (marketRes.status === 'fulfilled' && marketRes.value) { state.market = marketRes.value; ok = true; }
-
   if (state.index && !state.anchorKey) {
     state.anchorKey = state.index.default_anchor_key || '0715';
   }
-
   return ok;
 }
 
-// ════════════════════════════════════════════════════════════════════════════
-// REFRESH ENGINE — AZ time-aware, smart selective re-render
-// ════════════════════════════════════════════════════════════════════════════
+async function fetchHistory(days) {
+  try {
+    const res = await fetch(`/.netlify/functions/getLockIQHistory?days=${days}`);
+    if (!res.ok) return null;
+    return await res.json();
+  } catch { return null; }
+}
 
-// America/Phoenix = UTC-7, no DST ever
+// ═══════════════════════════════════════════════════════════════
+// REFRESH ENGINE — AZ time-aware
+// ═══════════════════════════════════════════════════════════════
 function _azNow() {
   return new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Phoenix' }));
 }
-
 function isMarketOpen() {
-  const az = _azNow();
-  const day = az.getDay(); // 0=Sun, 6=Sat
+  const az = _azNow(); const day = az.getDay();
   if (day === 0 || day === 6) return false;
   const t = az.getHours() * 60 + az.getMinutes();
-  return t >= 6 * 60 && t < 17 * 60;
+  return t >= 6*60 && t < 17*60;
+}
+function _getSession() {
+  const az = _azNow(); const day = az.getDay();
+  if (day === 0 || day === 6) return 'closed';
+  const t = az.getHours() * 60 + az.getMinutes();
+  if (t >= 6*60  && t < 17*60) return 'live';
+  if (t >= 5*60  && t < 6*60)  return 'pre';
+  if (t >= 17*60 && t < 21*60) return 'after';
+  return 'closed';
+}
+function _getRefreshInterval() {
+  const s = _getSession();
+  return s === 'live' ? 120 : s === 'pre' ? 300 : s === 'after' ? 600 : 1800;
 }
 
-function _getRefreshInterval() {
-  const az  = _azNow();
-  const day = az.getDay();
-  const t   = az.getHours() * 60 + az.getMinutes();
-  if (day === 0 || day === 6)         return 1800; // weekends
-  if (t >= 6*60  && t < 17*60)       return 120;  // market hours: 6 AM – 5 PM
-  if (t >= 5*60  && t < 6*60)        return 300;  // pre-market:  5 AM – 6 AM
-  if (t >= 17*60 && t < 21*60)       return 600;  // after-hours: 5 PM – 9 PM
-  return 1800;                                      // overnight
+function _updateTopbarStatus() {
+  const sess = _getSession();
+  const el = $('session-badge');
+  if (!el) return;
+  const labels = { live:'LIVE', pre:'PRE-MARKET', after:'AFTER HOURS', closed:'CLOSED' };
+  el.textContent = labels[sess] || 'CLOSED';
+  el.className = 'session-badge ' + sess;
 }
 
 async function doRefresh() {
   const prevCount   = state.chart?.point_count;
   const prevUpdated = state.chart?.last_updated;
-
-  $('refresh-indicator').className = 'stale';
+  const ind = $('refresh-indicator');
+  if (ind) ind.className = 'pulse stale';
   let ok = false;
   try { ok = await fetchAll(); } catch (_) {}
-  $('refresh-indicator').className = ok ? '' : 'error';
-
+  if (ind) ind.className = ok ? 'pulse' : 'pulse error';
   const ts = new Date();
-  $('last-updated').textContent = 'Updated ' + ts.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-  // Selective re-render — skip chart unless data changed
+  const lastEl = $('last-updated');
+  if (lastEl) lastEl.textContent = ts.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  _updateTopbarStatus();
   renderAnchorSelector();
   renderPricingEngine();
   renderChartSummary();
@@ -431,38 +519,41 @@ async function doRefresh() {
   renderBrokerRates();
   renderFedSnapshot();
   renderEconCalendar();
-
-  const chartChanged = state.chart?.point_count !== prevCount ||
-                       state.chart?.last_updated !== prevUpdated;
-  if ((chartChanged || !chartInstance) && state.chartView === 'today') {
-    renderChart();
-  }
+  const chartChanged = state.chart?.point_count !== prevCount || state.chart?.last_updated !== prevUpdated;
+  if ((chartChanged || !chartInstance) && state.chartView === 'today') renderChart();
 }
 
 function _startCountdown() {
   if (_countdownHandle) clearInterval(_countdownHandle);
   _nextRefreshAt = Date.now() + _getRefreshInterval() * 1000;
-
   _countdownHandle = setInterval(async () => {
     const rem = Math.max(0, _nextRefreshAt - Date.now());
-    const m   = Math.floor(rem / 60000);
-    const s   = Math.floor((rem % 60000) / 1000);
-    const cd  = $('countdown');
-    if (cd) cd.textContent = rem > 0
-      ? `Refreshing in ${m}:${s.toString().padStart(2, '0')}`
-      : 'Updating…';
-
+    const m = Math.floor(rem / 60000);
+    const s = Math.floor((rem % 60000) / 1000);
+    const cd = $('countdown');
+    if (cd) cd.textContent = rem > 0 ? `${m}:${s.toString().padStart(2,'0')}` : '…';
     if (rem <= 0) {
-      // Schedule next interval BEFORE awaiting so counter resets immediately
       _nextRefreshAt = Date.now() + _getRefreshInterval() * 1000;
       await doRefresh();
     }
   }, 1000);
 }
 
-// ════════════════════════════════════════════════════════════════════════════
+// ── Live AZ clock ─────────────────────────────────────────────
+function _tickClock() {
+  const az = _azNow();
+  const h = String(az.getHours()).padStart(2,'0');
+  const m = String(az.getMinutes()).padStart(2,'0');
+  const s = String(az.getSeconds()).padStart(2,'0');
+  const el = $('clock-el');
+  if (el) el.textContent = `${h}:${m}:${s} AZ`;
+}
+setInterval(_tickClock, 1000);
+_tickClock();
+
+// ═══════════════════════════════════════════════════════════════
 // SECTION 1 — LOCKIQ PRICING ENGINE
-// ════════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════
 function getAnchorData() {
   const idx = state.index;
   if (!idx) return null;
@@ -472,6 +563,7 @@ function getAnchorData() {
 
 function renderAnchorSelector() {
   const sel = $('anchor-select');
+  if (!sel) return;
   const opts = state.index?.available_anchor_options;
   if (!Array.isArray(opts) || opts.length === 0) { sel.innerHTML = '<option value="">No anchors</option>'; return; }
   sel.innerHTML = opts.map(o =>
@@ -482,95 +574,76 @@ function renderAnchorSelector() {
 
 function renderPricingEngine() {
   const idx = state.index;
-  if (!idx) { $('pricing-cards').innerHTML = '<p style="color:var(--muted);font-size:.85rem;">Data unavailable</p>'; return; }
+  const container = $('pricing-cards');
+  if (!container) return;
+  if (!idx) { container.innerHTML = '<div class="cal-empty">Data unavailable</div>'; return; }
 
-  // Market closed badge
   const mktClosed = !isMarketOpen();
   const mcb = $('market-closed-badge');
   if (mcb) mcb.style.display = mktClosed ? '' : 'none';
 
-  // Quality badge
   const qb = $('quality-badge');
   const dq = idx.data_quality || (getAnchorData()?.data_quality);
-  if (dq) {
+  if (qb && dq) {
     const isOk = /good|ok|live/i.test(dq);
     const isWarn = /partial|stale|warn/i.test(dq);
     qb.textContent = dq;
     qb.className = 'quality-badge ' + (isOk ? 'quality-ok' : isWarn ? 'quality-warn' : 'quality-err');
-  } else {
-    qb.textContent = '';
-  }
+  } else if (qb) { qb.textContent = ''; }
 
   const d = getAnchorData();
+  const anchorLabel = d?.anchor_label || d?.anchor_time || state.anchorKey || '7:15 AM';
 
   const products = [
-    { label: 'Conventional', pts: num(d?.live_conventional_index_pts), signal: d?.conv_signal },
-    { label: 'FHA',          pts: num(d?.live_fha_index_pts),          signal: d?.fha_signal  },
-    { label: 'VA',           pts: num(d?.live_va_index_pts),           signal: d?.va_signal   },
+    { label: 'Conventional', pts: num(d?.live_conventional_index_pts), signal: d?.conv_signal, accent: 'cyan' },
+    { label: 'FHA',          pts: num(d?.live_fha_index_pts),          signal: d?.fha_signal,  accent: 'amber' },
+    { label: 'VA',           pts: num(d?.live_va_index_pts),           signal: d?.va_signal,   accent: 'green' },
   ];
 
-  $('pricing-cards').innerHTML = products.map(p => {
-    const ptsClass = p.pts == null ? 'neutral' : p.pts > 0 ? 'positive' : p.pts < 0 ? 'negative' : 'neutral';
-    const sig      = (p.signal || '').toUpperCase();
+  container.innerHTML = products.map(p => {
+    const bps = p.pts != null ? p.pts * 100 : null;
+    const col = bps == null ? 'var(--text-sec)' : bps > 0 ? 'var(--green)' : bps < 0 ? 'var(--red)' : 'var(--amber)';
+    const bpsStr = bps != null ? (bps >= 0 ? '+' : '') + bps.toFixed(1) : '—';
+    const sig = (p.signal || '').toUpperCase();
     const sigClass = sig === 'BETTER' ? 'signal-better' : sig === 'WORSE' ? 'signal-worse' : 'signal-flat';
-    const ptsStr   = p.pts != null ? (p.pts >= 0 ? '+' : '') + fmt(p.pts, 2) + ' pts' : '— pts';
-    const bps      = p.pts != null ? p.pts * 100 : null;
-    const sigWord  = sig === 'BETTER' ? 'better' : sig === 'WORSE' ? 'worse' : sig === 'FLAT' ? 'flat' : '';
-    const bpsStr   = bps != null && sigWord ? fmt(Math.abs(bps), 1) + ' bps ' + sigWord : '';
-    return `<div class="pricing-card">
-      <div class="card-product">${p.label}</div>
-      <div class="card-pts ${ptsClass}">${ptsStr}</div>
-      <div class="card-pts-label">vs selected anchor</div>
-      ${bpsStr ? `<div class="card-bps">${bpsStr}</div>` : ''}
-      ${sig ? `<div class="signal-badge ${sigClass}${mktClosed ? ' closed' : ''}">${sig}</div>` : ''}
+    const sigWord = sig === 'BETTER' ? 'better' : sig === 'WORSE' ? 'worse' : sig === 'FLAT' ? 'flat' : '';
+    return `<div class="dial-card ${p.accent}">
+      <div class="dial-top-label">${p.label.toUpperCase()}</div>
+      <div class="dial-delta-main" style="color:${col}">${bpsStr}</div>
+      <div class="dial-price-sub">${bps != null ? 'bps' + (sigWord ? ' · ' + sigWord : '') : 'no data'}</div>
+      ${sig ? `<span class="signal-badge ${sigClass}${mktClosed ? ' closed' : ''}">${sig}</span>` : ''}
+      <div class="dial-ref-row">
+        <div class="dial-ref-lbl">Anchor</div>
+        <div class="dial-ref-val">${anchorLabel}</div>
+      </div>
     </div>`;
   }).join('');
 }
 
-// ════════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════
 // SECTION 2 — CHART
-// ════════════════════════════════════════════════════════════════════════════
-
-// ── History fetch ─────────────────────────────────────────────────────────
-async function fetchHistory(days) {
-  try {
-    const res = await fetch(`/.netlify/functions/getLockIQHistory?days=${days}`);
-    if (!res.ok) return null;
-    return await res.json();
-  } catch { return null; }
-}
-
-// ── Summary bar (Today view only) ─────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════
 function renderChartSummary() {
   const el = $('chart-summary');
   if (!el) return;
   if (state.chartView !== 'today') { el.innerHTML = ''; return; }
-
   const idx = state.index;
   if (!idx) { el.innerHTML = ''; return; }
-
-  const pts     = num(idx.live_conventional_index_pts);
-  const bps     = pts != null ? pts * 100 : null;
-  const signal  = (idx.conv_signal || '').toUpperCase();
+  const pts = num(idx.live_conventional_index_pts);
+  const bps = pts != null ? pts * 100 : null;
+  const signal = (idx.conv_signal || '').toUpperCase();
   const sigClass = signal === 'BETTER' ? 'signal-better' : signal === 'WORSE' ? 'signal-worse' : 'signal-flat';
-  const bpsClass = bps == null ? 'neu' : bps > 0 ? 'pos' : bps < 0 ? 'neg' : 'neu';
-  const bpsStr  = bps != null ? (bps >= 0 ? '+' : '') + bps.toFixed(1) + ' bps' : '—';
-  const anchor  = idx.anchor_label || idx.anchor_key || '7:15 AM';
-
-  el.className = 'chart-summary';
-  el.innerHTML = `
-    <div class="chart-sum-item">
-      <div class="chart-sum-label">Conv since 7:15 AM</div>
-      <div class="chart-sum-value ${bpsClass}">${bpsStr}</div>
-      ${signal ? `<div class="chart-sum-sub"><span class="signal-badge ${sigClass}">${signal}</span></div>` : ''}
+  const col = bps == null ? 'var(--text-sec)' : bps > 0 ? 'var(--green)' : bps < 0 ? 'var(--red)' : 'var(--amber)';
+  const bpsStr = bps != null ? (bps >= 0 ? '+' : '') + bps.toFixed(1) + ' bps' : '—';
+  el.innerHTML = `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+    <div>
+      <div class="chart-sum-lbl">Conv since 7:15 AM</div>
+      <div class="chart-sum-val" style="color:${col}">${bpsStr}</div>
     </div>
-    <div class="chart-sum-item" style="margin-left:auto">
-      <div class="chart-sum-label">Anchor</div>
-      <div class="chart-sum-value" style="font-size:.82rem;font-weight:600;color:var(--muted)">${anchor}</div>
-    </div>`;
+    ${signal ? `<span class="signal-badge ${sigClass}">${signal}</span>` : ''}
+  </div>`;
 }
 
-// ── Inline Chart.js plugin: zero-line + green/red zone shading ─────────────
 const _zeroBgPlugin = {
   id: 'zeroBg',
   beforeDatasetsDraw(chart) {
@@ -579,11 +652,11 @@ const _zeroBgPlugin = {
     const { top, bottom, left, right } = chartArea;
     const zero = Math.max(top, Math.min(bottom, scales.y.getPixelForValue(0)));
     ctx.save();
-    ctx.fillStyle = 'rgba(34,197,94,0.07)';
+    ctx.fillStyle = 'rgba(0,232,122,0.06)';
     ctx.fillRect(left, top, right - left, zero - top);
-    ctx.fillStyle = 'rgba(239,68,68,0.07)';
+    ctx.fillStyle = 'rgba(255,51,17,0.06)';
     ctx.fillRect(left, zero, right - left, bottom - zero);
-    ctx.strokeStyle = 'rgba(255,255,255,0.45)';
+    ctx.strokeStyle = 'rgba(255,255,255,0.42)';
     ctx.lineWidth = 1.5;
     ctx.setLineDash([]);
     ctx.beginPath(); ctx.moveTo(left, zero); ctx.lineTo(right, zero); ctx.stroke();
@@ -591,399 +664,330 @@ const _zeroBgPlugin = {
   },
 };
 
-// ── Core chart builder ─────────────────────────────────────────────────────
-// pts: array of { label, conv, govt, fha, va, convPer100k? }
 function renderChartFromPoints(pts) {
   const wrap = document.querySelector('.chart-wrap');
   if (!wrap) return;
-
   _chartPoints = pts || [];
-
   if (!pts || pts.length === 0) {
     if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
-    wrap.innerHTML = '<p style="color:var(--muted);font-size:.85rem;padding:2.5rem 0;text-align:center;">No data for this period</p>';
+    wrap.innerHTML = '<p style="font-family:var(--mono);font-size:12px;color:var(--text-dim);padding:40px 0;text-align:center;letter-spacing:.1em">NO DATA FOR THIS PERIOD</p>';
     return;
   }
-
-  // Restore canvas if previously replaced by a message
-  if (!$('lockiq-chart-canvas')) {
-    wrap.innerHTML = '<canvas id="lockiq-chart-canvas"></canvas>';
-  }
-
+  if (!$('lockiq-chart-canvas')) wrap.innerHTML = '<canvas id="lockiq-chart-canvas"></canvas>';
   if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
-
   const sparse = pts.length > 30;
-
   chartInstance = new Chart($('lockiq-chart-canvas'), {
     type: 'line',
     plugins: [_zeroBgPlugin],
     data: {
       labels: pts.map(p => p.label),
       datasets: [
-        {
-          label: 'Conventional',
-          data: pts.map(p => p.conv != null ? p.conv * 100 : null),
-          borderColor: '#22c55e',
-          backgroundColor: 'transparent',
-          borderWidth: 2,
-          pointRadius: sparse ? 0 : 3,
-          pointHoverRadius: 5,
-          tension: 0.3,
-          hidden: false,
-        },
-        {
-          label: "Gov’t",
-          data: pts.map(p => p.govt != null ? p.govt * 100 : null),
-          borderColor: '#3b82f6',
-          backgroundColor: 'transparent',
-          borderWidth: 2,
-          borderDash: [6, 3],
-          pointRadius: sparse ? 0 : 3,
-          pointHoverRadius: 5,
-          tension: 0.3,
-          hidden: false,
-        },
-        {
-          label: 'FHA',
-          data: pts.map(p => p.fha != null ? p.fha * 100 : null),
-          borderColor: '#f5a623',
-          backgroundColor: 'transparent',
-          borderWidth: 2,
-          pointRadius: sparse ? 0 : 3,
-          pointHoverRadius: 5,
-          tension: 0.3,
-          hidden: true,
-        },
-        {
-          label: 'VA',
-          data: pts.map(p => p.va != null ? p.va * 100 : null),
-          borderColor: '#a855f7',
-          backgroundColor: 'transparent',
-          borderWidth: 2,
-          pointRadius: sparse ? 0 : 3,
-          pointHoverRadius: 5,
-          tension: 0.3,
-          hidden: true,
-        },
+        { label:'Conventional', data:pts.map(p=>p.conv!=null?p.conv*100:null), borderColor:'#00e87a', backgroundColor:'transparent', borderWidth:2, pointRadius:sparse?0:3, pointHoverRadius:5, tension:0.3, hidden:false },
+        { label:"Gov't",        data:pts.map(p=>p.govt!=null?p.govt*100:null), borderColor:'#3a8be8', backgroundColor:'transparent', borderWidth:2, borderDash:[6,3], pointRadius:sparse?0:3, pointHoverRadius:5, tension:0.3, hidden:false },
+        { label:'FHA',          data:pts.map(p=>p.fha !=null?p.fha *100:null), borderColor:'#f0a800', backgroundColor:'transparent', borderWidth:2, pointRadius:sparse?0:3, pointHoverRadius:5, tension:0.3, hidden:true },
+        { label:'VA',           data:pts.map(p=>p.va  !=null?p.va  *100:null), borderColor:'#a855f7', backgroundColor:'transparent', borderWidth:2, pointRadius:sparse?0:3, pointHoverRadius:5, tension:0.3, hidden:true },
       ],
     },
     options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      interaction: { mode: 'index', intersect: false },
-      plugins: {
-        legend: {
-          labels: {
-            color: '#8aaad4',
-            font: { size: 11 },
-            boxWidth: 24,
-            usePointStyle: true,
-            pointStyleWidth: 16,
-          },
-        },
-        tooltip: {
-          backgroundColor: '#0f1f3d',
-          borderColor: '#1a3366',
-          borderWidth: 1,
-          titleColor: '#e8edf5',
-          bodyColor: '#8aaad4',
-          padding: 10,
-          callbacks: {
+      responsive:true, maintainAspectRatio:false,
+      interaction:{ mode:'index', intersect:false },
+      plugins:{
+        legend:{ labels:{ color:'#3e6882', font:{ size:11, family:"'Share Tech Mono',monospace" }, boxWidth:22, usePointStyle:true, pointStyleWidth:14 } },
+        tooltip:{
+          backgroundColor:'#0b1420', borderColor:'#203550', borderWidth:1,
+          titleColor:'#c8dcea', bodyColor:'#3e6882', padding:10,
+          titleFont:{ family:"'Share Tech Mono',monospace" }, bodyFont:{ family:"'Share Tech Mono',monospace", size:12 },
+          callbacks:{
             title: items => _chartPoints[items[0]?.dataIndex]?.label ?? items[0]?.label ?? '',
-            label: ctx => {
-              const v = ctx.parsed.y;   // already in bps (pts × 100)
-              if (v == null) return null;
-              return `${ctx.dataset.label}: ${v >= 0 ? '+' : ''}${v.toFixed(1)} bps`;
-            },
+            label: ctx => { const v=ctx.parsed.y; if(v==null) return null; return `${ctx.dataset.label}: ${v>=0?'+':''}${v.toFixed(1)} bps`; },
           },
         },
       },
-      scales: {
-        x: {
-          ticks: { color: '#8aaad4', font: { size: 10 }, maxTicksLimit: 10, maxRotation: 0 },
-          grid:  { color: 'rgba(26,51,102,0.4)' },
-        },
-        y: {
-          min: -50,
-          max:  50,
-          ticks: {
-            color: '#8aaad4',
-            font: { size: 10 },
-            stepSize: 25,
-            callback: v => (v >= 0 ? '+' : '') + v.toFixed(0),
-          },
-          grid: {
-            // zero line drawn by _zeroBgPlugin; suppress it here to avoid doubling
-            color: ctx => ctx.tick.value === 0 ? 'transparent' : 'rgba(26,51,102,0.4)',
-          },
+      scales:{
+        x:{ ticks:{ color:'#3e6882', font:{ size:10, family:"'Share Tech Mono',monospace" }, maxTicksLimit:10, maxRotation:0 }, grid:{ color:'rgba(32,53,80,0.5)' } },
+        y:{
+          min:-50, max:50,
+          ticks:{ color:'#3e6882', font:{ size:10, family:"'Share Tech Mono',monospace" }, stepSize:25, callback:v=>(v>=0?'+':'')+v.toFixed(0) },
+          grid:{ color: ctx=>ctx.tick.value===0?'transparent':'rgba(32,53,80,0.5)' },
         },
       },
     },
   });
 }
 
-// ── Load data for active view then render ──────────────────────────────────
 async function loadAndRenderChart() {
   const view = state.chartView;
-
   if (view === 'today') {
     const rawPts = state.chart?.points || [];
     renderChartFromPoints(rawPts.length ? rawPts.map(p => ({
       label: formatTime12(p.time) || p.anchor_key || '',
-      conv:  num(p.conv_index_pts),
-      govt:  num(p.govt_index_pts),
-      fha:   num(p.fha_index_pts),
-      va:    num(p.va_index_pts),
+      conv: num(p.conv_index_pts), govt: num(p.govt_index_pts),
+      fha: num(p.fha_index_pts),   va:   num(p.va_index_pts),
     })) : null);
     return;
   }
-
-  const daysMap  = { yesterday: 3, week: 7, '30d': 30 };
-  const days     = daysMap[view] || 7;
+  const daysMap = { yesterday:3, week:7, '30d':30 };
+  const days = daysMap[view] || 7;
   const cacheKey = String(days);
-  const now      = Date.now();
-  const cached   = state.historyCache[cacheKey];
-
+  const now = Date.now();
+  const cached = state.historyCache[cacheKey];
   let docs;
-  if (cached && (now - cached.ts) < 5 * 60 * 1000) {
+  if (cached && (now - cached.ts) < 5*60*1000) {
     docs = cached.data;
   } else {
-    renderChartFromPoints(null);   // brief "no data" while fetching
+    renderChartFromPoints(null);
     docs = await fetchHistory(days);
-    state.historyCache[cacheKey] = { data: docs, ts: now };
+    state.historyCache[cacheKey] = { data:docs, ts:now };
   }
-
-  if (view !== state.chartView) return;   // view changed while fetching
-
+  if (view !== state.chartView) return;
   if (!Array.isArray(docs) || !docs.length) { renderChartFromPoints(null); return; }
-
   let pts;
   if (view === 'yesterday') {
-    const todayStr = new Date().toISOString().slice(0, 10);
-    const yDoc = [...docs].reverse().find(d => d.date < todayStr) || docs[docs.length - 1];
-    const raw  = yDoc?.intraday_points || [];
-    pts = raw.map(p => ({
-      label: formatTime12(p.time) || p.anchor_key || '',
-      conv:  num(p.conv_index_pts),
-      govt:  num(p.govt_index_pts),
-      fha:   num(p.fha_index_pts),
-      va:    num(p.va_index_pts),
-    }));
+    const todayStr = new Date().toISOString().slice(0,10);
+    const yDoc = [...docs].reverse().find(d=>d.date<todayStr) || docs[docs.length-1];
+    const raw = yDoc?.intraday_points || [];
+    pts = raw.map(p => ({ label:formatTime12(p.time)||p.anchor_key||'', conv:num(p.conv_index_pts), govt:num(p.govt_index_pts), fha:num(p.fha_index_pts), va:num(p.va_index_pts) }));
   } else {
-    pts = docs.map(d => ({
-      label: d.date,
-      conv:  num(d.conv_close),
-      govt:  num(d.govt_close),
-      fha:   num(d.fha_close),
-      va:    num(d.va_close),
-    }));
+    pts = docs.map(d => ({ label:d.date, conv:num(d.conv_close), govt:num(d.govt_close), fha:num(d.fha_close), va:num(d.va_close) }));
   }
-
   renderChartFromPoints(pts.length ? pts : null);
 }
-
 function renderChart() { loadAndRenderChart(); }
 
-// ════════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════
 // SECTION 3 — MARKET PROXY
-// ════════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════
 function renderMarketProxy() {
   const sb = state.market?.shadow_bonds;
+  const container = $('market-tiles');
+  if (!container) return;
+
   const tiles = [
-    { label: 'ZN Futures',       value: num(sb?.ZN1_Current),        change: num(sb?.ZN1_Daily_Change),        dec: 3, invertChange: false },
-    { label: 'US 10-Year Yield', value: num(sb?.US10Y_Current),      change: num(sb?.US10Y_Daily_Change),      dec: 3, suffix: '%', bps: true, invertChange: true },
-    { label: 'MBB',              value: num(sb?.MBB_Shadow ?? sb?.MBB_Current), change: num(sb?.MBB_Shadow_Daily_Change ?? sb?.MBB_Daily_Change), dec: 2, invertChange: false },
+    { label:'ZN Futures',       val:num(sb?.ZN1_Current),   chg:num(sb?.ZN1_Daily_Change),   dec:3, inv:false, accent:'cyan',  unit:'price' },
+    { label:'US 10-Year Yield', val:num(sb?.US10Y_Current), chg:num(sb?.US10Y_Daily_Change), dec:3, inv:true,  accent:'amber', unit:'%', bps:true },
+    { label:'MBB ETF',          val:num(sb?.MBB_Shadow ?? sb?.MBB_Current), chg:num(sb?.MBB_Shadow_Daily_Change ?? sb?.MBB_Daily_Change), dec:2, inv:false, accent:'blue', unit:'price' },
   ];
 
-  $('market-tiles').innerHTML = tiles.map(t => {
-    const valStr = t.value != null ? fmt(t.value, t.dec) + (t.suffix || '') : '—';
-    let chgStr = '—', chgClass = 'neu';
-    if (t.change != null) {
-      const chgDisplay = t.bps ? (Math.round(t.change * 1000) / 10).toFixed(1) + ' bps' : (sign(t.change) + fmt(Math.abs(t.change), t.dec));
-      chgStr = (t.change > 0 ? '+' : '') + chgDisplay;
-      chgClass = dirClass(t.change, t.invertChange);
+  container.innerHTML = tiles.map(t => {
+    const valStr = t.val != null ? fmt(t.val, t.dec) + (t.unit === '%' ? '%' : '') : '—';
+    let chgStr = '—', chgColor = 'var(--text-sec)';
+    if (t.chg != null) {
+      const chgDisplay = t.bps
+        ? (Math.round(t.chg * 1000)/10).toFixed(1) + ' bps'
+        : (t.chg >= 0 ? '+' : '') + fmt(Math.abs(t.chg), t.dec);
+      chgStr = (t.chg > 0 ? '+' : '') + chgDisplay;
+      chgColor = dirColor(t.chg, t.inv);
     }
-    return `<div class="market-tile">
-      <div class="tile-label">${t.label}</div>
-      <div class="tile-value">${valStr}</div>
-      <div class="tile-change ${chgClass}">${chgStr} today</div>
+    return `<div class="dial-card ${t.accent}">
+      <div class="dial-top-label">${t.label.toUpperCase()}</div>
+      <div class="dial-delta-main" style="color:${chgColor};font-size:36px">${valStr}</div>
+      <div class="dial-price-sub" style="color:${chgColor}">${chgStr} today</div>
+      <div class="dial-ref-row">
+        <div class="dial-ref-lbl">Daily Change</div>
+        <div class="dial-ref-val" style="color:${chgColor}">${chgStr}</div>
+      </div>
     </div>`;
   }).join('');
 }
 
-// ════════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════
 // SECTION 4 — BROKER RATES
-// ════════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════
+function _rateRow(product, val, chg, tag, onclick) {
+  const chgClass = chg == null ? 'neu' : chg < 0 ? 'pos' : chg > 0 ? 'neg' : 'neu';
+  const chgIcon  = chg == null ? '' : chg < 0 ? '▲ ' : chg > 0 ? '▼ ' : '';
+  const chgStr   = chg != null ? chgIcon + (chg > 0 ? '+' : '') + chg.toFixed(3) : '—';
+  const valFmt   = val != null ? val.toFixed(3) : '—';
+  return `<div class="rate-row" ${onclick ? `onclick="${onclick}"` : ''}>
+    <div class="rate-row-product">${product}</div>
+    <div class="rate-row-main">
+      <span class="rate-row-val">${valFmt}</span>
+      ${val != null ? '<span class="rate-row-pct">%</span>' : ''}
+    </div>
+    <div class="rate-row-change ${chgClass}">${chgStr}</div>
+    ${tag ? `<div style="font-family:var(--mono);font-size:11px;color:var(--blue);background:var(--blue-dim);border:1px solid rgba(58,139,232,.18);padding:1px 7px;border-radius:3px;letter-spacing:.07em;display:inline-block;margin-top:2px">${tag}</div>` : ''}
+  </div>`;
+}
+
 function renderBrokerRates() {
   const br   = state.market?.broker_rates;
   const fred = state.market?.fred_cache;
+  const container = $('broker-panels');
+  if (!container) return;
 
-  // Panel 1: Pipeline rates
-  const pipeline = [
-    { label: '30Y Conventional', val: num(br?.conv30) },
-    { label: '30Y FHA',          val: num(br?.fha30)  },
-    { label: '30Y VA',           val: num(br?.va30)   },
-    { label: '30Y Jumbo',        val: num(br?.jumbo30)},
+  // Panel 1 — Broker Price Index (A-Paper, cyan)
+  const bpiRows = [
+    { key:'30Y Conv',    val:num(br?.conv30),    chg:null },
+    { key:'30Y FHA',     val:num(br?.fha30),     chg:null },
+    { key:'30Y VA',      val:num(br?.va30),      chg:null },
+    { key:'30Y Jumbo',   val:num(br?.jumbo30),   chg:null, tag:'JUMBO' },
+    { key:'30Y Cash-Out',val:num(br?.cashout30), chg:null, tag:'CASHOUT' },
+    { key:'30Y Invest',  val:num(br?.inv30),     chg:null, tag:'INVEST' },
   ].filter(r => r.val != null);
+  const asOf = br?.as_of ? `as of ${br.as_of}` : 'Live rate sheets';
+  const bpiBody = bpiRows.length
+    ? bpiRows.map(r => _rateRow(r.key, r.val, r.chg, r.tag || null, `openRateModal('${r.key}')`)).join('')
+    : `<div class="rate-no-data">NO RATE DATA</div>`;
 
-  const pipelineHtml = pipeline.length
-    ? `<table class="rate-table">
-         <thead><tr><th>Product</th><th style="text-align:right">Rate</th></tr></thead>
-         <tbody>${pipeline.map(r => `<tr><td class="product-cell">${r.label}</td><td>${fmtRate(r.val)}</td></tr>`).join('')}</tbody>
-       </table>
-       ${br?.as_of ? `<p class="as-of-note">As of ${br.as_of}</p>` : ''}`
-    : '<p style="color:var(--muted);font-size:.82rem;">No pipeline rate data</p>';
-
-  // Panel 2: Freddie Mac PMMS
-  const freddie = [
-    { label: '30Y Fixed', val: fredVal(fred, 'MORTGAGE30US') },
-    { label: '15Y Fixed', val: fredVal(fred, 'MORTGAGE15US') },
-  ].filter(r => r.val != null);
-
-  const freddieHtml = freddie.length
-    ? `<table class="rate-table">
-         <thead><tr><th>Product</th><th style="text-align:right">Rate</th></tr></thead>
-         <tbody>${freddie.map(r => `<tr><td class="product-cell">${r.label}</td><td>${fmtRate(r.val)}</td></tr>`).join('')}</tbody>
-       </table>
-       <p class="as-of-note">Freddie Mac PMMS — weekly survey</p>`
-    : '<p style="color:var(--muted);font-size:.82rem;">No Freddie Mac data</p>';
-
-  // Panel 3: Optimal Blue primary mortgage market rates (fred_cache OBMMIC* keys)
-  const obKeys = [
-    { label: '30Y Conv', key: 'OBMMIC30YF'   },
-    { label: '30Y FHA',  key: 'OBMMIFHA30YF' },
-    { label: '30Y VA',   key: 'OBMMIVA30YF'  },
+  // Panel 2 — Market Composite Rates (OB OBMMI, amber)
+  const obMap = [
+    { key:'30Y Conv',  fred:'OBMMIC30YF' },
+    { key:'30Y FHA',   fred:'OBMMIFHA30YF' },
+    { key:'30Y VA',    fred:'OBMMIVA30YF' },
+    { key:'30Y Jumbo', fred:'OBMMIJUMBO30YF' },
   ];
-  const obRates = obKeys.map(r => ({
-    label:  r.label,
-    val:    fredVal(fred, r.key),
-    change: fredChange(fred, r.key),
-  })).filter(r => r.val != null);
+  const obRows = obMap.map(r => ({ key:r.key, val:fredVal(fred, r.fred), chg:fredChange(fred, r.fred) })).filter(r=>r.val!=null);
+  const obDate  = fredDate(fred, 'OBMMIC30YF');
+  const mcrBody = obRows.length
+    ? obRows.map(r => _rateRow(r.key, r.val, r.chg)).join('')
+    : `<div class="rate-no-data">NO OBMMI DATA</div>`;
 
-  const obDate    = fredDate(fred, 'OBMMIC30YF');
-  const hasOb     = obRates.length > 0;
+  // Panel 3 — Freddie Mac PMMS (blue)
+  const fredMap = [
+    { key:'30Y Fixed', fred:'MORTGAGE30US' },
+    { key:'15Y Fixed', fred:'MORTGAGE15US' },
+  ];
+  const fredRows = fredMap.map(r => ({ key:r.key, val:fredVal(fred, r.fred), chg:fredChange(fred, r.fred) })).filter(r=>r.val!=null);
+  const pmmsBody = fredRows.length
+    ? fredRows.map(r => _rateRow(r.key, r.val, r.chg)).join('')
+    : `<div class="rate-no-data">NO PMMS DATA</div>`;
 
-  const obHtml = hasOb
-    ? `<table class="rate-table">
-         <thead><tr><th>Product</th><th style="text-align:right">Rate</th><th style="text-align:right">Wk Chg</th></tr></thead>
-         <tbody>${obRates.map(r => {
-           const chgClass = dirClass(r.change, true);
-           const chgStr = r.change != null
-             ? `<span class="${chgClass}">${r.change > 0 ? '+' : ''}${r.change.toFixed(2)}</span>`
-             : '—';
-           return `<tr><td class="product-cell">${r.label}</td><td>${fmtRate(r.val)}</td><td style="text-align:right;font-size:.82rem">${chgStr}</td></tr>`;
-         }).join('')}</tbody>
-       </table>
-       <p class="as-of-note">Optimal Blue OBMMIC${obDate ? ' — ' + obDate : ''}</p>`
-    : '<p style="color:var(--muted);font-size:.82rem;">No Optimal Blue data</p>';
-
-  const bpEl = $('broker-panels');
-  bpEl.className = hasOb ? 'three-panels' : 'two-panels';
-  bpEl.innerHTML = `
-    <div>
-      <div class="rate-panel-title">Pipeline Rates</div>
-      ${pipelineHtml}
+  container.innerHTML = `
+    <div class="rate-panel bpi">
+      <div class="rate-panel-header">
+        <div class="rate-panel-info">
+          <div class="rate-panel-source">BPI · Live</div>
+          <button onclick="openInfoModal('bpi')" style="font-family:var(--mono);font-size:11px;color:var(--text-sec);background:rgba(255,255,255,.03);border:1px solid var(--border);padding:2px 8px;border-radius:3px;cursor:pointer;letter-spacing:.07em">ⓘ</button>
+        </div>
+        <div class="rate-panel-meta">Live Rate Sheets · Par + 100bps · 760 FICO · ${asOf}</div>
+      </div>
+      <div class="rate-panel-body">${bpiBody}</div>
     </div>
-    <div>
-      <div class="rate-panel-title">Freddie Mac PMMS</div>
-      ${freddieHtml}
+    <div class="rate-panel mcr">
+      <div class="rate-panel-header">
+        <div class="rate-panel-info">
+          <div class="rate-panel-source">MCR · OBMMI</div>
+          <button onclick="openInfoModal('mcr')" style="font-family:var(--mono);font-size:11px;color:var(--text-sec);background:rgba(255,255,255,.03);border:1px solid var(--border);padding:2px 8px;border-radius:3px;cursor:pointer;letter-spacing:.07em">ⓘ</button>
+        </div>
+        <div class="rate-panel-meta">FRED · Optimal Blue MMI · Daily Benchmark${obDate ? ' · ' + obDate : ''}</div>
+      </div>
+      <div class="rate-panel-body">${mcrBody}</div>
     </div>
-    ${hasOb ? `<div>
-      <div class="rate-panel-title">Optimal Blue</div>
-      ${obHtml}
-    </div>` : ''}`;
+    <div class="rate-panel freddie">
+      <div class="rate-panel-header">
+        <div class="rate-panel-info">
+          <div class="rate-panel-source">Freddie Mac</div>
+          <button onclick="openInfoModal('pmms')" style="font-family:var(--mono);font-size:11px;color:var(--text-sec);background:rgba(255,255,255,.03);border:1px solid var(--border);padding:2px 8px;border-radius:3px;cursor:pointer;letter-spacing:.07em">ⓘ</button>
+        </div>
+        <div class="rate-panel-meta">PMMS · Weekly Survey</div>
+      </div>
+      <div class="rate-panel-body">${pmmsBody}</div>
+    </div>`;
 }
 
-// ════════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════
 // SECTION 5 — FED SNAPSHOT
-// ════════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════
 function renderFedSnapshot() {
   const fred = state.market?.fred_cache;
-  const ffr  = fredVal(fred, 'FEDFUNDS') ?? fredVal(fred, 'fed_funds_rate') ?? fredVal(fred, 'DFEDTARU');
-  const prime = fredVal(fred, 'DPRIME')  ?? fredVal(fred, 'prime_rate')     ?? fredVal(fred, 'PRIME');
-
-  const items = [
-    { label: 'Fed Funds Target', val: ffr   != null ? ffr.toFixed(2)   + '%' : '—' },
-    { label: 'Prime Rate',       val: prime != null ? prime.toFixed(2) + '%' : '—' },
-  ];
-
-  $('fed-grid').innerHTML = items.map(item =>
-    `<div class="fed-item">
-       <div class="fed-label">${item.label}</div>
-       <div class="fed-value">${item.val}</div>
-     </div>`
+  const ffr   = fredVal(fred, 'FEDFUNDS')  ?? fredVal(fred, 'fed_funds_rate') ?? fredVal(fred, 'DFEDTARU');
+  const prime = fredVal(fred, 'DPRIME')    ?? fredVal(fred, 'prime_rate')     ?? fredVal(fred, 'PRIME');
+  const fedEl = $('fed-chip');
+  if (fedEl && ffr != null) {
+    fedEl.textContent = `Fed Funds: ${ffr.toFixed(2)}%`;
+    fedEl.style.display = '';
+  }
+  const grid = $('fed-grid');
+  if (!grid) return;
+  grid.innerHTML = [
+    { label:'Fed Funds Target', val: ffr   != null ? ffr.toFixed(2)   + '%' : '—' },
+    { label:'Prime Rate',       val: prime != null ? prime.toFixed(2) + '%' : '—' },
+  ].map((item, i) => i > 0
+    ? `<div class="fed-strip-sep"></div><div class="fed-strip-item"><div class="fed-strip-lbl">${item.label}</div><div class="fed-strip-val">${item.val}</div></div>`
+    : `<div class="fed-strip-item"><div class="fed-strip-lbl">${item.label}</div><div class="fed-strip-val">${item.val}</div></div>`
   ).join('');
 }
 
-// ════════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════
 // SECTION 6 — ECONOMIC CALENDAR
-// ════════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════
 function renderEconCalendar() {
   const calEl = $('cal-content');
+  if (!calEl) return;
   if (!state.market) {
-    calEl.innerHTML = '<p class="cal-empty">No calendar data</p>';
+    calEl.innerHTML = '<div class="cal-empty">No calendar data</div>';
     return;
   }
-
-  // Pick event source by tab
-  const pad = n => String(n).padStart(2, '0');
-  const tmr = new Date(); tmr.setDate(tmr.getDate() + 1);
+  const pad = n => String(n).padStart(2,'0');
+  const tmr = new Date(); tmr.setDate(tmr.getDate()+1);
   const tomorrowStr = `${tmr.getFullYear()}-${pad(tmr.getMonth()+1)}-${pad(tmr.getDate())}`;
   const thisWeek = getWeekRange(0);
   const nextWeek = getWeekRange(1);
-
   let rawEvents;
-  if (state.calTab === 'today') {
-    rawEvents = state.market.econ_calendar_today?.events || [];
-  } else if (state.calTab === 'tomorrow') {
-    rawEvents = (state.market.econ_calendar_upcoming?.events || [])
-      .filter(e => e.date === tomorrowStr);
-  } else if (state.calTab === 'week') {
-    rawEvents = (state.market.econ_calendar_upcoming?.events || [])
-      .filter(e => e.date >= thisWeek.start && e.date <= thisWeek.end);
-  } else {
-    rawEvents = (state.market.econ_calendar_upcoming?.events || [])
-      .filter(e => e.date >= nextWeek.start && e.date <= nextWeek.end);
-  }
+  if (state.calTab === 'today')        rawEvents = state.market.econ_calendar_today?.events || [];
+  else if (state.calTab === 'tomorrow')rawEvents = (state.market.econ_calendar_upcoming?.events||[]).filter(e=>e.date===tomorrowStr);
+  else if (state.calTab === 'week')    rawEvents = (state.market.econ_calendar_upcoming?.events||[]).filter(e=>e.date>=thisWeek.start&&e.date<=thisWeek.end);
+  else                                 rawEvents = (state.market.econ_calendar_upcoming?.events||[]).filter(e=>e.date>=nextWeek.start&&e.date<=nextWeek.end);
 
-  // Keep High, Medium, and any star_event; drop Low non-stars
-  const events = rawEvents.filter(e =>
-    e.impact_label !== 'Low' || e.star_event === true
-  );
-
+  const events = rawEvents.filter(e => e.impact_label !== 'Low' || e.star_event === true);
   if (events.length === 0) {
-    calEl.innerHTML = '<p class="cal-empty">No events for this period</p>';
+    calEl.innerHTML = '<div class="cal-empty">No events for this period</div>';
     return;
   }
-
-  const showDate  = state.calTab !== 'today';
-  const dateHdr   = showDate ? '<th>Date</th>' : '';
-  const rows = events.map(e => {
-    const badge    = e.impact_label === 'High'
-      ? '<span class="impact-high">HIGH</span>'
-      : '<span class="impact-medium">MED</span>';
+  const showDate = state.calTab !== 'today';
+  calEl.innerHTML = events.map(e => {
+    const impClass = e.impact_label === 'High' ? 'impact-high' : e.impact_label === 'Low' ? 'impact-low' : 'impact-med';
+    const impText  = e.impact_label === 'High' ? 'HIGH' : e.impact_label === 'Low' ? 'LOW' : 'MED';
+    const timeStr  = e.time || '—';
     const forecast = (e.forecast != null && e.forecast !== '') ? e.forecast : '—';
-    const actual   = (e.actual   != null && e.actual   !== '') ? e.actual   : null;
-    const dateCell = showDate ? `<td style="color:var(--muted)">${e.date || ''}</td>` : '';
-    return `<tr>
-      ${dateCell}
-      <td style="color:var(--muted);white-space:nowrap">${e.time || '—'}</td>
-      <td>${e.event || ''}</td>
-      <td>${badge}</td>
-      <td style="text-align:right;color:var(--muted)">${forecast}</td>
-      <td style="text-align:right">${actual != null ? actual : '<span style="color:var(--muted)">—</span>'}</td>
-    </tr>`;
+    const dateStr  = showDate ? e.date || '' : timeStr;
+    return `<div class="econ-row">
+      <div class="econ-date">${dateStr}</div>
+      <div class="econ-event">${e.event || '—'}</div>
+      <div class="econ-prev">${forecast}</div>
+      <div class="econ-impact ${impClass}">${impText}</div>
+    </div>`;
   }).join('');
-
-  calEl.innerHTML = `<table class="cal-table">
-    <thead><tr>${dateHdr}<th>Time (ET)</th><th>Event</th><th>Impact</th><th style="text-align:right">Forecast</th><th style="text-align:right">Actual</th></tr></thead>
-    <tbody>${rows}</tbody>
-  </table>`;
 }
 
-// ════════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════
+// MODALS
+// ═══════════════════════════════════════════════════════════════
+const INFO_MODALS = {
+  bpi: { title:'Broker Price Index', sub:'Live Rate Sheets — Methodology',
+    body:'Built from live lender pricing. Reflects realistic borrower expectations when working with a mortgage broker. <strong>Rate Assumptions:</strong> 30-Year Fixed · Primary Residence · 75% LTV · 760 FICO · Conforming · Par pricing · 100 bps broker comp.' },
+  mcr: { title:'Market Composite Rates', sub:'FRED — Optimal Blue MMI',
+    body:'Aggregated mortgage pricing across multiple lenders from Federal Reserve Bank of St. Louis (FRED) via Optimal Blue Mortgage Market Indices. Updated daily on business days. Use as a directional benchmark, not for quoting.' },
+  pmms: { title:'Freddie Mac PMMS', sub:'Primary Mortgage Market Survey',
+    body:'The longest-running weekly mortgage rate survey in the US, published every Thursday. Reflects average rates offered to creditworthy borrowers on conventional conforming mortgages. Weekly cadence — not real-time.' },
+};
+
+function openInfoModal(key) {
+  const m = INFO_MODALS[key];
+  if (!m) return;
+  $('modal-title').textContent = m.title;
+  $('modal-sub').textContent   = m.sub;
+  $('modal-body').innerHTML    = m.body;
+  $('modal-chart-canvas').style.display = 'none';
+  $('rate-modal').classList.add('open');
+}
+
+function openRateModal(product) {
+  $('modal-title').textContent = product + ' — Rate History';
+  $('modal-sub').textContent   = 'BROKER PRICE INDEX';
+  $('modal-body').innerHTML    = 'Historical rate chart — connect lockiq_daily_history collection to populate.';
+  $('modal-chart-canvas').style.display = '';
+  $('rate-modal').classList.add('open');
+}
+
+function setModalRange(btn, range) {
+  document.querySelectorAll('.modal-range-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+// ═══════════════════════════════════════════════════════════════
 // RENDER ALL
-// ════════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════
 function renderAll() {
   renderAnchorSelector();
   renderPricingEngine();
@@ -993,13 +997,13 @@ function renderAll() {
   renderBrokerRates();
   renderFedSnapshot();
   renderEconCalendar();
+  _updateTopbarStatus();
 }
 
-// ════════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════
 // INIT
-// ════════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════
 async function initDashboard() {
-  // Chart view tabs
   document.querySelectorAll('.chart-view-tab').forEach(btn => {
     btn.addEventListener('click', () => {
       document.querySelectorAll('.chart-view-tab').forEach(b => b.classList.remove('active'));
@@ -1009,8 +1013,6 @@ async function initDashboard() {
       loadAndRenderChart();
     });
   });
-
-  // Calendar tab switcher
   document.querySelectorAll('.cal-tab').forEach(btn => {
     btn.addEventListener('click', () => {
       document.querySelectorAll('.cal-tab').forEach(b => b.classList.remove('active'));
@@ -1019,21 +1021,20 @@ async function initDashboard() {
       renderEconCalendar();
     });
   });
-
-  // Initial load — fetch immediately, then start time-aware countdown
-  $('refresh-indicator').className = 'stale';
+  const ind = $('refresh-indicator');
+  if (ind) ind.className = 'pulse stale';
   let ok = false;
   try { ok = await fetchAll(); } catch (_) {}
-  $('refresh-indicator').className = ok ? '' : 'error';
-  const ts = new Date();
-  $('last-updated').textContent = 'Updated ' + ts.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  if (ind) ind.className = ok ? 'pulse' : 'pulse error';
+  const lastEl = $('last-updated');
+  if (lastEl) lastEl.textContent = new Date().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
   renderAll();
   _startCountdown();
 }
 
-// ════════════════════════════════════════════════════════════════════════════
-// CLERK AUTH GATE (preserved from previous version)
-// ════════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════
+// CLERK AUTH GATE
+// ═══════════════════════════════════════════════════════════════
 (async () => {
   const loading  = $('loading-screen');
   const appShell = $('app-shell');
@@ -1042,21 +1043,20 @@ async function initDashboard() {
   function showApp(email) {
     loading.style.display  = 'none';
     appShell.style.display = 'block';
-    $('user-email').textContent = email || '';
+    const ue = $('user-email');
+    if (ue) ue.textContent = email || '';
     initDashboard();
   }
 
   async function goToCheckout(token) {
     const res = await fetch('/.netlify/functions/createCheckoutSession', {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${token}` },
+      method:'POST', headers:{ 'Authorization':'Bearer '+token },
     });
     if (!res.ok) throw new Error('createCheckoutSession failed');
     const { url } = await res.json();
     window.location.href = url;
   }
 
-  // Try Clerk
   let clerk = null;
   try {
     const res = await fetch('/.netlify/functions/getConfig');
@@ -1069,53 +1069,31 @@ async function initDashboard() {
     }
   } catch { /* Clerk unavailable */ }
 
-  // No Clerk → show dashboard ungated (dev mode)
-  if (!clerk) {
-    showApp('');
-    $('sign-out-btn').style.display = 'none';
-    return;
-  }
-
-  // Must be signed in
+  if (!clerk) { showApp(''); const sb=$('sign-out-btn'); if(sb) sb.style.display='none'; return; }
   if (!clerk.user) { window.location.href = '/'; return; }
 
   const email = clerk.user.primaryEmailAddress?.emailAddress || '';
   const token = await clerk.session.getToken();
 
-  $('sign-out-btn').addEventListener('click', async () => {
-    await clerk.signOut();
-    window.location.href = '/';
-  });
+  const sb = $('sign-out-btn');
+  if (sb) sb.addEventListener('click', async () => { await clerk.signOut(); window.location.href='/'; });
 
-  // New signup → Stripe
   if (params.get('checkout') === '1') {
-    history.replaceState(null, '', '/app.html');
+    history.replaceState(null,'','/app.html');
     try { await goToCheckout(token); } catch { showApp(email); }
     return;
   }
-
-  // Returning from Stripe → show optimistically
   if (params.get('checkout') === 'complete') {
-    history.replaceState(null, '', '/app.html');
+    history.replaceState(null,'','/app.html');
     showApp(email);
     return;
   }
-
-  // Normal visit → check subscription
   try {
-    const res = await fetch('/.netlify/functions/checkSubscription', {
-      headers: { 'Authorization': `Bearer ${token}` },
-    });
+    const res = await fetch('/.netlify/functions/checkSubscription', { headers:{ 'Authorization':'Bearer '+token } });
     if (!res.ok) throw new Error();
     const { status } = await res.json();
-    if (status === 'active') {
-      showApp(email);
-    } else {
-      await goToCheckout(token);
-    }
-  } catch {
-    showApp(email); // subscription check error → show rather than block
-  }
+    if (status === 'active') showApp(email); else await goToCheckout(token);
+  } catch { showApp(email); }
 })();
 </script>
 </body>
