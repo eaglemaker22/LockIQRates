@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LockIQ Rate Impact — Test</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:       #080f1d;
+      --card:     #0f1f3d;
+      --card-alt: #132240;
+      --border:   #1a3366;
+      --navy:     #0f1f3d;
+      --blue:     #1a56db;
+      --gold:     #f5a623;
+      --text:     #e8edf5;
+      --muted:    #8aaad4;
+      --green:    #22c55e;
+      --red:      #ef4444;
+      --yellow:   #f59e0b;
+    }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+    nav { background: var(--navy); display: flex; align-items: center; justify-content: space-between; padding: 0 1.5rem; height: 56px; border-bottom: 1px solid var(--border); }
+    .logo { color: #fff; font-size: 1.1rem; font-weight: 700; letter-spacing: -0.5px; }
+    .logo span { color: var(--gold); }
+    .nav-badge { font-size: 0.68rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; background: rgba(26,86,219,0.2); border: 1px solid rgba(26,86,219,0.4); color: #60a5fa; padding: 0.2rem 0.6rem; border-radius: 4px; }
+
+    .container { max-width: 1100px; margin: 0 auto; padding: 1.5rem; display: flex; flex-direction: column; gap: 1.25rem; }
+
+    /* Loading */
+    #loading { display: flex; flex-direction: column; align-items: center; gap: 1rem; padding: 4rem 0; color: var(--muted); }
+    .spinner { width: 36px; height: 36px; border: 3px solid #1a3366; border-top-color: var(--blue); border-radius: 50%; animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Section */
+    .section { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem 1.5rem; }
+    .section-hd { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem; }
+    .section-title { font-size: 0.7rem; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); }
+
+    /* LRI Cards */
+    .lri-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .lri-card { background: var(--card-alt); border: 1px solid var(--border); border-radius: 10px; padding: 1.25rem 1.5rem; display: flex; flex-direction: column; gap: 0.5rem; }
+    .card-product { font-size: 0.68rem; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); }
+    .card-direction { font-size: 1.7rem; font-weight: 800; line-height: 1.15; }
+    .card-direction.better { color: var(--green); }
+    .card-direction.worse  { color: var(--red); }
+    .card-direction.flat   { color: var(--muted); }
+    .card-bps { font-size: 0.9rem; font-weight: 600; }
+    .card-bps.better { color: var(--green); }
+    .card-bps.worse  { color: var(--red); }
+    .card-bps.flat   { color: var(--muted); }
+    .card-dollars { font-size: 0.82rem; color: var(--muted); }
+    .signal-badge { display: inline-flex; align-items: center; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.5px; padding: 0.2rem 0.55rem; border-radius: 4px; width: fit-content; margin-top: 0.15rem; }
+    .signal-better { background: rgba(34,197,94,0.15); color: var(--green); border: 1px solid rgba(34,197,94,0.3); }
+    .signal-worse  { background: rgba(239,68,68,0.15);  color: var(--red);   border: 1px solid rgba(239,68,68,0.3); }
+    .signal-flat   { background: rgba(139,153,180,0.15); color: var(--muted); border: 1px solid rgba(139,153,180,0.3); }
+
+    /* Badges */
+    .badge { font-size: 0.68rem; font-weight: 700; letter-spacing: 0.5px; padding: 0.2rem 0.55rem; border-radius: 4px; text-transform: uppercase; }
+    .badge-ok      { background: rgba(34,197,94,0.15);   color: var(--green);  border: 1px solid rgba(34,197,94,0.3); }
+    .badge-warn    { background: rgba(245,158,11,0.15);  color: var(--yellow); border: 1px solid rgba(245,158,11,0.3); }
+    .badge-limited { background: rgba(239,68,68,0.15);   color: var(--red);    border: 1px solid rgba(239,68,68,0.3); }
+    .badge-muted   { background: rgba(139,153,180,0.15); color: var(--muted);  border: 1px solid rgba(139,153,180,0.3); }
+
+    /* Metadata */
+    .meta-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem 1.5rem; }
+    .meta-item { display: flex; flex-direction: column; gap: 0.25rem; }
+    .meta-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); }
+    .meta-value { font-size: 0.88rem; font-weight: 600; }
+
+    /* Range buttons */
+    .range-tabs { display: flex; gap: 0.25rem; }
+    .range-tab { background: transparent; border: 1px solid var(--border); color: var(--muted); padding: 0.3rem 0.75rem; border-radius: 6px; font-size: 0.75rem; cursor: pointer; font-family: inherit; }
+    .range-tab.active { background: var(--blue); border-color: var(--blue); color: #fff; cursor: default; }
+    .range-tab:disabled { opacity: 0.35; cursor: not-allowed; }
+
+    /* Chart */
+    .chart-wrap { width: 100%; margin-top: 0.75rem; }
+    .chart-empty { color: var(--muted); font-size: 0.88rem; padding: 3rem 0; text-align: center; }
+
+    /* Debug panel */
+    .debug-panel { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 1rem 1.5rem; }
+    .debug-title { font-size: 0.65rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-bottom: 0.75rem; }
+    .debug-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.4rem 2rem; }
+    .debug-row { display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; color: var(--muted); }
+    .debug-row strong { color: var(--text); font-weight: 600; }
+    .dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .dot-ok   { background: var(--green); }
+    .dot-err  { background: var(--red); }
+    .dot-wait { background: var(--muted); }
+
+    /* Error */
+    .error-card { background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.25); border-radius: 10px; padding: 1.25rem 1.5rem; color: var(--red); font-size: 0.88rem; }
+
+    @media (max-width: 600px) {
+      .lri-cards { grid-template-columns: 1fr; }
+      .meta-grid  { grid-template-columns: 1fr 1fr; }
+      .debug-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="logo">Lock<span>IQ</span> Rates</div>
+  <span class="nav-badge">Rate Impact Test</span>
+</nav>
+
+<div class="container">
+
+  <div id="loading">
+    <div class="spinner"></div>
+    <span>Loading LRI data&hellip;</span>
+  </div>
+
+  <div id="error-container"></div>
+
+  <!-- main content, hidden until data loads -->
+  <div id="main" style="display:none; flex-direction:column; gap:1.25rem;">
+
+    <!-- LRI Cards -->
+    <div class="section">
+      <div class="section-hd">
+        <span class="section-title">LockIQ Rate Impact Test</span>
+        <span id="status-badge" class="badge"></span>
+      </div>
+      <div class="lri-cards">
+        <div class="lri-card" id="conv-card"></div>
+        <div class="lri-card" id="gov-card"></div>
+      </div>
+    </div>
+
+    <!-- Metadata -->
+    <div class="section">
+      <div class="section-hd">
+        <span class="section-title">Anchor &amp; Data Quality</span>
+      </div>
+      <div class="meta-grid" id="meta-grid"></div>
+    </div>
+
+    <!-- Chart -->
+    <div class="section">
+      <div class="section-hd">
+        <span class="section-title" id="chart-title">LRI Since Anchor</span>
+        <div class="range-tabs">
+          <button class="range-tab active">1D</button>
+          <button class="range-tab" disabled>5D — soon</button>
+          <button class="range-tab" disabled>1M — soon</button>
+          <button class="range-tab" disabled>3M — soon</button>
+        </div>
+      </div>
+      <div class="chart-wrap" id="chart-wrap"></div>
+    </div>
+
+    <!-- Debug -->
+    <div class="debug-panel">
+      <div class="debug-title">Debug</div>
+      <div class="debug-grid" id="debug-grid"></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ── Utilities ─────────────────────────────────────────────────────────────────
+
+function todayStr() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function fmtAnchorTime(t) {
+  // "07:15:00" → "7:15 AM"
+  if (!t) return null;
+  const [h, m] = t.split(':').map(Number);
+  if (isNaN(h)) return t;
+  const ampm = h < 12 ? 'AM' : 'PM';
+  return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${ampm}`;
+}
+
+function fmtBps(v) {
+  if (v == null) return '—';
+  return (v >= 0 ? '+' : '') + v.toFixed(1) + ' bps';
+}
+
+function fmtDollars(v) {
+  if (v == null) return '—';
+  return (v >= 0 ? '+' : '') + '$' + Math.abs(v).toFixed(0) + ' / $100k';
+}
+
+function directionCls(d) {
+  if (d === 'BETTER') return 'better';
+  if (d === 'WORSE')  return 'worse';
+  return 'flat';
+}
+
+function directionLabel(d, bps) {
+  if (d === 'FLAT')   return 'Flat since anchor';
+  if (d === 'BETTER') return '↑ Better since anchor';
+  if (d === 'WORSE')  return '↓ Worse since anchor';
+  // fallback: derive from bps sign (positive = better in public convention)
+  if (bps == null) return '—';
+  if (bps > 0) return '↑ Better since anchor';
+  if (bps < 0) return '↓ Worse since anchor';
+  return 'Flat since anchor';
+}
+
+function signalCls(d) {
+  if (d === 'BETTER') return 'signal-better';
+  if (d === 'WORSE')  return 'signal-worse';
+  return 'signal-flat';
+}
+
+function badgeCls(type, v) {
+  if (type === 'status') return v === 'OK' ? 'badge-ok' : v === 'LIMITED' ? 'badge-limited' : 'badge-muted';
+  if (type === 'anchor') return v === 'GOOD' ? 'badge-ok' : v === 'MISSING' ? 'badge-limited' : 'badge-muted';
+  if (type === 'conf')   return (v === 'GOOD' || v === 'OK') ? 'badge-ok' : v === 'OK_WITH_WARNINGS' ? 'badge-warn' : v === 'LIMITED' ? 'badge-limited' : 'badge-muted';
+  return 'badge-muted';
+}
+
+function badge(type, v) {
+  return `<span class="badge ${badgeCls(type, v)}">${v || '—'}</span>`;
+}
+
+// ── Render helpers ────────────────────────────────────────────────────────────
+
+function renderCard(el, { label, bps, dollars, direction }) {
+  const cls = directionCls(direction);
+  el.innerHTML = `
+    <div class="card-product">${label}</div>
+    <div class="card-direction ${cls}">${directionLabel(direction, bps)}</div>
+    <div class="card-bps ${cls}">${fmtBps(bps)}</div>
+    <div class="card-dollars">${fmtDollars(dollars)}</div>
+    <span class="signal-badge ${signalCls(direction)}">${direction || '—'}</span>`;
+}
+
+function renderMeta(d) {
+  document.getElementById('meta-grid').innerHTML = `
+    <div class="meta-item"><span class="meta-label">Anchor Time</span>
+      <span class="meta-value">${d.anchor_time || '—'}</span></div>
+    <div class="meta-item"><span class="meta-label">Anchor Label</span>
+      <span class="meta-value">${d.anchor_label || '—'}</span></div>
+    <div class="meta-item"><span class="meta-label">Anchor Status</span>
+      <span class="meta-value">${badge('anchor', d.anchor_status)}</span></div>
+    <div class="meta-item"><span class="meta-label">Confidence</span>
+      <span class="meta-value">${badge('conf', d.confidence)}</span></div>
+    <div class="meta-item"><span class="meta-label">Status</span>
+      <span class="meta-value">${badge('status', d.status)}</span></div>
+    <div class="meta-item"><span class="meta-label">Last Updated</span>
+      <span class="meta-value">${d.last_updated || '—'}</span></div>`;
+}
+
+// ── SVG Chart ─────────────────────────────────────────────────────────────────
+
+function tickTime(ts) {
+  // "2026-05-29 16:29:51" → "16:29"
+  const t = (ts || '').split(' ')[1];
+  return t ? t.slice(0, 5) : '';
+}
+
+function drawChart(points) {
+  const wrap = document.getElementById('chart-wrap');
+  if (!points || points.length === 0) {
+    wrap.innerHTML = '<div class="chart-empty">No LRI chart points available for this date yet.</div>';
+    return;
+  }
+
+  const W = 800, H = 220;
+  const PL = 50, PR = 20, PT = 24, PB = 32;
+  const pw = W - PL - PR, ph = H - PT - PB;
+  const n = points.length;
+
+  const allVals = [
+    ...points.map(p => p.conv_lri_bps),
+    ...points.map(p => p.gov_lri_bps),
+    0,
+  ].filter(v => v != null);
+  let yMin = Math.min(...allVals), yMax = Math.max(...allVals);
+  const pad = (yMax - yMin || 2) * 0.18;
+  yMin -= pad; yMax += pad;
+
+  const toX = i => PL + (n > 1 ? (i / (n - 1)) * pw : pw / 2);
+  const toY = v => PT + ph - ((v - yMin) / (yMax - yMin)) * ph;
+  const pts = key => points
+    .map((p, i) => p[key] != null ? `${toX(i).toFixed(1)},${toY(p[key]).toFixed(1)}` : null)
+    .filter(Boolean).join(' ');
+
+  const zY      = toY(0).toFixed(1);
+  const yTicks  = [yMax, 0, yMin];
+  const midI    = Math.floor(n / 2);
+
+  const gridLines = yTicks.map(v =>
+    `<line x1="${PL}" y1="${toY(v).toFixed(1)}" x2="${W - PR}" y2="${toY(v).toFixed(1)}" stroke="#1a3366" stroke-width="1"/>`
+  ).join('');
+
+  const yLabels = yTicks.map(v =>
+    `<text x="${PL - 6}" y="${toY(v).toFixed(1)}" text-anchor="end" dominant-baseline="middle" fill="#8aaad4" font-size="11" font-family="system-ui,sans-serif">${v.toFixed(1)}</text>`
+  ).join('');
+
+  const xLabels = [
+    `<text x="${PL}" y="${H - 6}" text-anchor="start" fill="#8aaad4" font-size="11" font-family="system-ui,sans-serif">${tickTime(points[0].timestamp)}</text>`,
+    n > 2 ? `<text x="${toX(midI).toFixed(1)}" y="${H - 6}" text-anchor="middle" fill="#8aaad4" font-size="11" font-family="system-ui,sans-serif">${tickTime(points[midI].timestamp)}</text>` : '',
+    `<text x="${W - PR}" y="${H - 6}" text-anchor="end" fill="#8aaad4" font-size="11" font-family="system-ui,sans-serif">${tickTime(points[n - 1].timestamp)}</text>`,
+  ].join('');
+
+  wrap.innerHTML = `
+<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:240px;display:block;">
+  ${gridLines}
+  <line x1="${PL}" y1="${zY}" x2="${W - PR}" y2="${zY}" stroke="#2a4480" stroke-width="1.5"/>
+  <polyline points="${pts('conv_lri_bps')}" fill="none" stroke="#22d3ee" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+  <polyline points="${pts('gov_lri_bps')}"  fill="none" stroke="#f5a623" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+  ${yLabels}
+  ${xLabels}
+  <circle cx="${W - 88}" cy="13" r="4" fill="#22d3ee"/>
+  <text x="${W - 81}" y="17" fill="#e8edf5" font-size="11" font-family="system-ui,sans-serif">Conv</text>
+  <circle cx="${W - 42}" cy="13" r="4" fill="#f5a623"/>
+  <text x="${W - 35}" y="17" fill="#e8edf5" font-size="11" font-family="system-ui,sans-serif">Gov</text>
+</svg>`;
+}
+
+// ── Debug panel ───────────────────────────────────────────────────────────────
+
+function renderDebug({ currentOk, chartOk, pointCount, lastTick }) {
+  const dot = ok => ok === null
+    ? '<span class="dot dot-wait"></span>'
+    : ok ? '<span class="dot dot-ok"></span>' : '<span class="dot dot-err"></span>';
+  const yn = ok => ok === null ? '…' : ok ? 'yes' : 'no';
+  document.getElementById('debug-grid').innerHTML = `
+    <div class="debug-row">${dot(currentOk)} Current endpoint loaded: <strong>${yn(currentOk)}</strong></div>
+    <div class="debug-row">${dot(chartOk)} Chart endpoint loaded: <strong>${yn(chartOk)}</strong></div>
+    <div class="debug-row"><span class="dot dot-wait" style="visibility:hidden"></span> Chart point count: <strong>${pointCount ?? '—'}</strong></div>
+    <div class="debug-row"><span class="dot dot-wait" style="visibility:hidden"></span> Last chart point: <strong>${lastTick || '—'}</strong></div>`;
+}
+
+// ── Main ──────────────────────────────────────────────────────────────────────
+
+const dbg = { currentOk: null, chartOk: null, pointCount: null, lastTick: null };
+
+async function loadAll() {
+  renderDebug(dbg);
+
+  // 1. Fetch current LRI snapshot
+  let current;
+  try {
+    const res = await fetch('/.netlify/functions/getPublicLRI');
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    current = await res.json();
+    dbg.currentOk = true;
+  } catch (err) {
+    dbg.currentOk = false;
+    renderDebug(dbg);
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('error-container').innerHTML =
+      `<div class="error-card">Failed to load current LRI data: ${err.message}</div>`;
+    return;
+  }
+
+  // 2. Fetch tick history — use trading_date from current payload, or today
+  const chartDate = current.trading_date || todayStr();
+  let points = [];
+  try {
+    const res = await fetch(`/.netlify/functions/getPublicLRIChart?date=${encodeURIComponent(chartDate)}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const chartData = await res.json();
+    points          = chartData.points || [];
+    dbg.chartOk     = true;
+    dbg.pointCount  = chartData.count ?? points.length;
+    dbg.lastTick    = points.at(-1)?.timestamp || '—';
+  } catch (err) {
+    dbg.chartOk    = false;
+    dbg.pointCount = 0;
+    dbg.lastTick   = '—';
+  }
+
+  renderDebug(dbg);
+
+  // 3. Reveal UI
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('main').style.display = 'flex';
+
+  // Status badge
+  const sb = document.getElementById('status-badge');
+  sb.textContent = current.status || '—';
+  sb.className = `badge ${badgeCls('status', current.status)}`;
+
+  // Cards
+  renderCard(document.getElementById('conv-card'), {
+    label: 'Conventional LRI', bps: current.conv_lri_bps,
+    dollars: current.conv_dollars_per_100k, direction: current.conv_direction,
+  });
+  renderCard(document.getElementById('gov-card'), {
+    label: 'Government LRI', bps: current.gov_lri_bps,
+    dollars: current.gov_dollars_per_100k, direction: current.gov_direction,
+  });
+
+  // Metadata
+  renderMeta(current);
+
+  // Chart title: "LRI Since 7:15 AM"
+  const at = fmtAnchorTime(current.anchor_time);
+  document.getElementById('chart-title').textContent = at ? `LRI Since ${at}` : 'LRI Since Anchor';
+
+  // Chart
+  drawChart(points);
+}
+
+loadAll();
+</script>
+</body>
+</html>
