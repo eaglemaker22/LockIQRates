@@ -80,6 +80,9 @@
     .chart-wrap { width: 100%; margin-top: 0.75rem; }
     .chart-empty { color: var(--muted); font-size: 0.88rem; padding: 3rem 0; text-align: center; }
 
+    /* Date override notice */
+    .chart-date-notice { font-size: 0.75rem; color: var(--yellow); background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.2); border-radius: 6px; padding: 0.4rem 0.75rem; margin-bottom: 0.6rem; }
+
     /* Debug panel */
     .debug-panel { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 1rem 1.5rem; }
     .debug-title { font-size: 0.65rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-bottom: 0.75rem; }
@@ -151,6 +154,7 @@
           <button class="range-tab" disabled>3M — soon</button>
         </div>
       </div>
+      <div id="chart-date-notice" class="chart-date-notice" style="display:none;"></div>
       <div class="chart-wrap" id="chart-wrap"></div>
     </div>
 
@@ -321,7 +325,7 @@ function drawChart(points) {
 
 // ── Debug panel ───────────────────────────────────────────────────────────────
 
-function renderDebug({ currentOk, chartOk, pointCount, lastTick }) {
+function renderDebug({ currentOk, chartOk, pointCount, lastTick, chartDate }) {
   const dot = ok => ok === null
     ? '<span class="dot dot-wait"></span>'
     : ok ? '<span class="dot dot-ok"></span>' : '<span class="dot dot-err"></span>';
@@ -330,15 +334,19 @@ function renderDebug({ currentOk, chartOk, pointCount, lastTick }) {
     <div class="debug-row">${dot(currentOk)} Current endpoint loaded: <strong>${yn(currentOk)}</strong></div>
     <div class="debug-row">${dot(chartOk)} Chart endpoint loaded: <strong>${yn(chartOk)}</strong></div>
     <div class="debug-row"><span class="dot dot-wait" style="visibility:hidden"></span> Chart point count: <strong>${pointCount ?? '—'}</strong></div>
-    <div class="debug-row"><span class="dot dot-wait" style="visibility:hidden"></span> Last chart point: <strong>${lastTick || '—'}</strong></div>`;
+    <div class="debug-row"><span class="dot dot-wait" style="visibility:hidden"></span> Last chart point: <strong>${lastTick || '—'}</strong></div>
+    <div class="debug-row"><span class="dot dot-wait" style="visibility:hidden"></span> Chart date: <strong>${chartDate || '—'}</strong></div>`;
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 
-const dbg = { currentOk: null, chartOk: null, pointCount: null, lastTick: null };
+const dbg = { currentOk: null, chartOk: null, pointCount: null, lastTick: null, chartDate: null };
 
 async function loadAll() {
   renderDebug(dbg);
+
+  const params  = new URLSearchParams(window.location.search);
+  const urlDate = params.get('date');
 
   // 1. Fetch current LRI snapshot
   let current;
@@ -356,8 +364,9 @@ async function loadAll() {
     return;
   }
 
-  // 2. Fetch tick history — use trading_date from current payload, or today
-  const chartDate = current.trading_date || todayStr();
+  // 2. Fetch tick history — URL ?date= overrides trading_date; falls back to today
+  const chartDate = urlDate || current.trading_date || todayStr();
+  dbg.chartDate = chartDate;
   let points = [];
   try {
     const res = await fetch(`/.netlify/functions/getPublicLRIChart?date=${encodeURIComponent(chartDate)}`);
@@ -378,6 +387,13 @@ async function loadAll() {
   // 3. Reveal UI
   document.getElementById('loading').style.display = 'none';
   document.getElementById('main').style.display = 'flex';
+
+  // Date override notice
+  const notice = document.getElementById('chart-date-notice');
+  if (urlDate) {
+    notice.textContent = `Test date override active: ${urlDate}`;
+    notice.style.display = '';
+  }
 
   // Status badge
   const sb = document.getElementById('status-badge');
