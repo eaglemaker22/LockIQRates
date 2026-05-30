@@ -190,7 +190,9 @@ function fmtBps(v) {
 
 function fmtDollars(v) {
   if (v == null) return '—';
-  return (v >= 0 ? '+' : '') + '$' + Math.abs(v).toFixed(0) + ' / $100k';
+  if (v === 0) return '$0 / $100k';
+  const sign = v > 0 ? '+' : '-';
+  return `${sign}$${Math.abs(v).toFixed(0)} / $100k`;
 }
 
 function directionCls(d) {
@@ -391,7 +393,7 @@ async function loadAll() {
   // Date override notice
   const notice = document.getElementById('chart-date-notice');
   if (urlDate) {
-    notice.textContent = `Test date override active: ${urlDate}`;
+    notice.innerHTML = `Test date override active: ${urlDate} &nbsp;&ndash;&nbsp; Cards show current LRI. Chart uses test date: ${urlDate}.`;
     notice.style.display = '';
   }
 
