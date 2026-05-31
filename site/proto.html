@@ -1,913 +1,870 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Dashboard — LockIQ Rates</title>
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>LockIQ Rate Impact — LRI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+:root{
+  --bg:#070b12;
+  --bg-grad-1:#0a111c;
+  --panel:#0c1320;
+  --panel-2:#0e1726;
+  --panel-rise:#111d2f;
+  --line:rgba(148,178,214,.10);
+  --line-strong:rgba(148,178,214,.18);
+  --ink:#e7eef7;
+  --ink-2:#9fb0c6;
+  --ink-3:#6c7c92;
+  --ink-4:#4a576b;
 
-    :root {
-      --bg:       #080f1d;
-      --card:     #0f1f3d;
-      --card-alt: #132240;
-      --border:   #1a3366;
-      --navy:     #0f1f3d;
-      --blue:     #1a56db;
-      --gold:     #f5a623;
-      --cyan:     #22d3ee;
-      --text:     #e8edf5;
-      --muted:    #8aaad4;
-      --green:    #22c55e;
-      --red:      #ef4444;
-      --yellow:   #f59e0b;
-    }
+  --teal:#21c7c0;        /* LockIQ accent / Conventional */
+  --teal-soft:rgba(33,199,192,.14);
+  --better:#3ad29a;      /* green / better */
+  --worse:#e0564c;       /* restrained red / worse */
+  --flat:#7e8ea6;        /* muted blue-gray / flat */
+  --gov:#eaa13c;         /* amber / Government */
 
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+  --font-sans:'IBM Plex Sans',system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+  --font-mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
 
-    /* ── NAV ── */
-    nav { background: var(--navy); display: flex; align-items: center; justify-content: space-between; padding: 0 1.5rem; height: 56px; border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; }
-    .logo { color: #fff; font-size: 1.1rem; font-weight: 700; letter-spacing: -0.5px; }
-    .logo span { color: var(--gold); }
-    .nav-right { display: flex; align-items: center; gap: 1rem; }
-    .nav-meta { display: flex; align-items: center; gap: 1.25rem; }
-    #last-updated { font-size: 0.78rem; color: var(--muted); }
-    #refresh-indicator { width: 8px; height: 8px; border-radius: 50%; background: var(--green); display: inline-block; }
-    #refresh-indicator.stale { background: var(--yellow); }
-    #user-email { color: var(--muted); font-size: 0.8rem; }
-    #sign-out-btn { background: transparent; border: 1px solid rgba(255,255,255,0.2); color: var(--muted); padding: 0.35rem 0.85rem; border-radius: 5px; font-size: 0.78rem; cursor: pointer; }
-    #sign-out-btn:hover { border-color: rgba(255,255,255,0.4); color: #fff; }
+  --r:14px;
+  --r-sm:9px;
+  --shadow:0 1px 0 rgba(255,255,255,.03) inset, 0 18px 40px -24px rgba(0,0,0,.8);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:
+    radial-gradient(1200px 700px at 50% -200px, #0e1a2c 0%, transparent 60%),
+    radial-gradient(900px 600px at 100% 0%, #0b1622 0%, transparent 55%),
+    var(--bg);
+  color:var(--ink);
+  font-family:var(--font-sans);
+  font-size:15px;
+  line-height:1.45;
+  -webkit-font-smoothing:antialiased;
+  min-height:100vh;
+  padding:28px 22px 56px;
+}
+.wrap{max-width:1340px;margin:0 auto}
 
-    /* ── LOADING ── */
-    #loading-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; gap: 1rem; color: var(--muted); }
-    .spinner { width: 40px; height: 40px; border: 3px solid #1a3366; border-top-color: var(--blue); border-radius: 50%; animation: spin 0.8s linear infinite; }
-    @keyframes spin { to { transform: rotate(360deg); } }
+/* ---------- shared panel ---------- */
+.panel{
+  background:linear-gradient(180deg,var(--panel-2),var(--panel));
+  border:1px solid var(--line);
+  border-radius:var(--r);
+  box-shadow:var(--shadow);
+}
+.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+.eyebrow{
+  font-family:var(--font-mono);
+  font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;
+  color:var(--ink-3);font-weight:600;
+}
 
-    /* ── APP SHELL ── */
-    #app-shell { display: none; }
-    .dashboard { max-width: 1400px; margin: 0 auto; padding: 1.25rem 1.5rem 3rem; display: flex; flex-direction: column; gap: 1.25rem; }
+/* ---------- header ---------- */
+.topbar{
+  display:flex;align-items:center;justify-content:space-between;gap:18px;
+  padding:0 4px 18px;
+}
+.brand{display:flex;align-items:center;gap:14px}
+.mark{
+  width:42px;height:42px;border-radius:11px;flex:none;
+  background:linear-gradient(150deg,#10202e,#0a151f);
+  border:1px solid rgba(33,199,192,.34);
+  display:grid;place-items:center;position:relative;
+  box-shadow:0 0 0 1px rgba(0,0,0,.4), 0 0 24px -6px rgba(33,199,192,.5);
+}
+.mark span{font-family:var(--font-mono);font-weight:700;font-size:15px;color:var(--teal);letter-spacing:.02em}
+.mark::after{content:"";position:absolute;inset:0;border-radius:11px;
+  background:linear-gradient(180deg,rgba(33,199,192,.10),transparent 60%)}
+.brand h1{font-size:16px;font-weight:600;margin:0;letter-spacing:.01em}
+.brand .sub{font-size:11px;color:var(--ink-3);font-family:var(--font-mono);letter-spacing:.04em;margin-top:1px}
+.topbar .right{display:flex;align-items:center;gap:18px;flex-wrap:wrap;justify-content:flex-end}
+.statpill{display:flex;align-items:center;gap:8px;font-family:var(--font-mono);font-size:11.5px;color:var(--ink-2)}
+.statpill b{color:var(--ink);font-weight:600}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--better);box-shadow:0 0 0 0 rgba(58,210,154,.6);animation:pulse 2.4s infinite}
+.dot.stale{background:var(--gov);animation:none}
+.dot.dead{background:var(--worse);animation:none}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(58,210,154,.45)}70%{box-shadow:0 0 0 7px rgba(58,210,154,0)}100%{box-shadow:0 0 0 0 rgba(58,210,154,0)}}
+.divline{height:1px;background:linear-gradient(90deg,transparent,var(--line-strong) 12%,var(--line-strong) 88%,transparent);margin:4px 0 22px}
 
-    /* ── SECTION WRAPPER ── */
-    .dash-section { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem 1.5rem; }
-    .section-hd { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 1.1rem; }
-    .section-title { font-size: 0.7rem; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); }
+/* ---------- hero controls row ---------- */
+.herorow{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap;margin-bottom:16px}
+.herorow .title h2{margin:0;font-size:22px;font-weight:600;letter-spacing:-.01em}
+.herorow .title p{margin:6px 0 0;color:var(--ink-2);font-size:13px;max-width:560px}
+.changesince{display:flex;align-items:center;gap:12px}
+.changesince .lbl{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-3)}
 
-    /* ── SHARED CONTROLS ── */
-    .ctrl-group { display: flex; flex-direction: column; gap: 0.2rem; }
-    .ctrl-label { font-size: 0.68rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
-    select { background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 0.4rem 0.65rem; border-radius: 6px; font-size: 0.85rem; font-family: inherit; }
-    select:focus { outline: none; border-color: var(--blue); }
+/* custom dropdown */
+.dd{position:relative}
+.dd-btn{
+  display:flex;align-items:center;gap:12px;
+  background:linear-gradient(180deg,var(--panel-rise),var(--panel-2));
+  border:1px solid var(--line-strong);border-radius:11px;
+  padding:11px 14px;cursor:pointer;color:var(--ink);
+  font-family:var(--font-sans);font-size:14px;font-weight:600;
+  box-shadow:0 0 0 1px rgba(0,0,0,.3),0 12px 26px -20px rgba(0,0,0,.9);
+  transition:border-color .15s, background .15s;
+}
+.dd-btn:hover{border-color:rgba(33,199,192,.4)}
+.dd-btn .tk{font-family:var(--font-mono);color:var(--teal);font-size:13px}
+.dd-btn .chev{color:var(--ink-3);transition:transform .18s}
+.dd.open .dd-btn .chev{transform:rotate(180deg)}
+.dd-menu{
+  position:absolute;top:calc(100% + 8px);right:0;min-width:240px;z-index:40;
+  background:var(--panel-2);border:1px solid var(--line-strong);border-radius:12px;
+  padding:6px;box-shadow:0 24px 50px -18px rgba(0,0,0,.85);
+  opacity:0;transform:translateY(-6px) scale(.99);pointer-events:none;transition:.16s;
+}
+.dd.open .dd-menu{opacity:1;transform:none;pointer-events:auto}
+.dd-item{display:flex;align-items:center;justify-content:space-between;gap:10px;
+  padding:10px 11px;border-radius:8px;font-size:13.5px;cursor:pointer;color:var(--ink)}
+.dd-item:hover{background:rgba(33,199,192,.10)}
+.dd-item.active{color:var(--teal)}
+.dd-item.active .tag{color:var(--teal);border-color:rgba(33,199,192,.4)}
+.dd-item.disabled{color:var(--ink-4);cursor:not-allowed}
+.dd-item.disabled:hover{background:transparent}
+.dd-item .tag{font-family:var(--font-mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;
+  border:1px solid var(--line-strong);border-radius:5px;padding:2px 6px;color:var(--ink-4)}
 
-    /* ── BADGES ── */
-    .badge { font-size: 0.68rem; font-weight: 700; letter-spacing: 0.5px; padding: 0.22rem 0.55rem; border-radius: 4px; text-transform: uppercase; }
-    .badge-ok      { background: rgba(34,197,94,0.15);   color: var(--green);  border: 1px solid rgba(34,197,94,0.3); }
-    .badge-warn    { background: rgba(245,158,11,0.15);  color: var(--yellow); border: 1px solid rgba(245,158,11,0.3); }
-    .badge-limited { background: rgba(239,68,68,0.15);   color: var(--red);    border: 1px solid rgba(239,68,68,0.3); }
-    .badge-muted   { background: rgba(139,153,180,0.15); color: var(--muted);  border: 1px solid rgba(139,153,180,0.3); }
+/* ---------- cards grid ---------- */
+.grid-cards{display:grid;grid-template-columns:1fr 1fr 1.12fr;gap:16px;margin-bottom:16px}
+.card{padding:20px 20px 18px;position:relative;overflow:hidden}
+.card .accentbar{position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--flat)}
+.card.is-better .accentbar{background:var(--better)}
+.card.is-worse .accentbar{background:var(--worse)}
+.card.is-flat .accentbar{background:var(--flat)}
+.card-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px}
+.card-head .name{display:flex;flex-direction:column;gap:3px}
+.card-head .name .t{font-size:14px;font-weight:600;letter-spacing:.01em}
+.badge{font-family:var(--font-mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;font-weight:600;
+  padding:5px 9px;border-radius:999px;border:1px solid;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.badge .pip{width:6px;height:6px;border-radius:50%;background:currentColor}
+.badge.better{color:var(--better);border-color:rgba(58,210,154,.34);background:rgba(58,210,154,.08)}
+.badge.worse{color:var(--worse);border-color:rgba(224,86,76,.34);background:rgba(224,86,76,.08)}
+.badge.flat{color:var(--flat);border-color:rgba(126,142,166,.34);background:rgba(126,142,166,.08)}
 
-    /* ── SIGNAL BADGES ── */
-    .signal-badge { display: inline-flex; align-items: center; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.5px; padding: 0.2rem 0.55rem; border-radius: 4px; width: fit-content; margin-top: 0.2rem; }
-    .signal-better { background: rgba(34,197,94,0.15); color: var(--green); border: 1px solid rgba(34,197,94,0.3); }
-    .signal-worse  { background: rgba(239,68,68,0.15);  color: var(--red);   border: 1px solid rgba(239,68,68,0.3); }
-    .signal-flat   { background: rgba(139,153,180,0.15); color: var(--muted); border: 1px solid rgba(139,153,180,0.3); }
+.bps-hero{display:flex;align-items:baseline;gap:10px;line-height:1}
+.bps-hero .val{font-family:var(--font-mono);font-weight:700;font-size:52px;letter-spacing:-.02em;color:var(--ink)}
+.card.is-better .bps-hero .val{color:var(--better)}
+.card.is-worse .bps-hero .val{color:var(--worse)}
+.card.is-flat .bps-hero .val{color:var(--ink)}
+.bps-hero .unit{font-family:var(--font-mono);font-size:15px;color:var(--ink-3);font-weight:500}
+.dir-text{font-family:var(--font-mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-2);margin-top:12px;font-weight:600}
+.card.is-better .dir-text{color:var(--better)}
+.card.is-worse .dir-text{color:var(--worse)}
+.dollar{display:flex;align-items:center;gap:8px;margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
+.dollar .k{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-4)}
+.dollar .v{font-family:var(--font-mono);font-size:14px;color:var(--ink-2);font-weight:600;margin-left:auto}
 
-    /* ── COLOR HELPERS ── */
-    .pos { color: var(--green); }
-    .neg { color: var(--red); }
-    .neu { color: var(--muted); }
+/* ---------- reprice watch ---------- */
+.rw{padding:20px 20px 18px;display:flex;flex-direction:column}
+.rw-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.rw-head .t{font-size:14px;font-weight:600;display:flex;align-items:center;gap:9px}
+.rw-head .t .ico{width:18px;height:18px;color:var(--ink-3)}
+.rw-level{display:flex;align-items:baseline;gap:12px}
+.rw-level .lv{font-family:var(--font-mono);font-weight:700;font-size:30px;letter-spacing:.01em}
+.rw-level .mv{font-family:var(--font-mono);font-size:12px;color:var(--ink-3)}
+.meter{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin:16px 0 10px}
+.seg{height:7px;border-radius:3px;background:rgba(148,178,214,.10);position:relative;overflow:hidden}
+.seg.on{background:var(--segcol,var(--flat));box-shadow:0 0 12px -2px var(--segcol,var(--flat))}
+.meter-labels{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin-bottom:14px}
+.meter-labels span{font-family:var(--font-mono);font-size:8.5px;letter-spacing:.06em;color:var(--ink-4);text-align:center}
+.meter-labels span.cur{color:var(--ink-2)}
+.rw-msg{font-size:12.5px;color:var(--ink-2);line-height:1.5;margin-top:auto;padding-top:6px}
 
-    /* ── SECTION 1: LRI CARDS ── */
-    .lri-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
-    .lri-card { background: var(--card-alt); border: 1px solid var(--border); border-radius: 10px; padding: 1.25rem 1.5rem; display: flex; flex-direction: column; gap: 0.35rem; }
-    .lri-product { font-size: 0.68rem; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); }
-    .lri-direction { font-size: 1.75rem; font-weight: 800; line-height: 1.15; }
-    .lri-direction.better { color: var(--green); }
-    .lri-direction.worse  { color: var(--red); }
-    .lri-direction.flat   { color: var(--muted); }
-    .lri-since { font-size: 0.7rem; color: var(--muted); margin-top: -0.1rem; }
-    .lri-bps { font-size: 0.95rem; font-weight: 700; margin-top: 0.2rem; }
-    .lri-bps.better { color: var(--green); }
-    .lri-bps.worse  { color: var(--red); }
-    .lri-bps.flat   { color: var(--muted); }
-    .lri-dollars { font-size: 0.82rem; color: var(--muted); }
+/* ---------- chart panel ---------- */
+.chartpanel{padding:18px 20px 16px;margin-bottom:16px}
+.chart-top{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:6px}
+.chart-top h3{margin:0;font-size:16px;font-weight:600}
+.chart-top .meta{font-family:var(--font-mono);font-size:11px;color:var(--ink-3);margin-top:4px}
+.chart-ctrls{display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+.rangebtns{display:flex;background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:3px;gap:2px}
+.rangebtns button{
+  font-family:var(--font-mono);font-size:12px;font-weight:600;letter-spacing:.04em;
+  background:transparent;border:0;color:var(--ink-3);padding:6px 13px;border-radius:6px;cursor:pointer;position:relative;
+}
+.rangebtns button.active{background:rgba(33,199,192,.14);color:var(--teal)}
+.rangebtns button:disabled{color:var(--ink-4);cursor:not-allowed}
+.rangebtns button .soon{position:absolute;top:-7px;right:-2px;font-size:6.5px;letter-spacing:.08em;color:var(--ink-4);
+  border:1px solid var(--line);border-radius:3px;padding:0 3px;background:var(--bg)}
+.toggle{display:flex;align-items:center;gap:9px;cursor:pointer;user-select:none}
+.toggle .sw{width:34px;height:19px;border-radius:999px;background:rgba(148,178,214,.16);position:relative;transition:.18s;flex:none}
+.toggle .sw::after{content:"";position:absolute;top:2px;left:2px;width:15px;height:15px;border-radius:50%;background:#cdd8e6;transition:.18s}
+.toggle.on .sw{background:rgba(234,161,60,.4)}
+.toggle.on .sw::after{left:17px;background:var(--gov)}
+.toggle .lab{font-family:var(--font-mono);font-size:11.5px;color:var(--ink-2);display:flex;align-items:center;gap:7px}
+.toggle .lab .swatch{width:14px;height:3px;border-radius:2px;background:var(--gov)}
+.toggle.on .lab{color:var(--ink)}
 
-    /* ── REPRICE WATCH STRIP ── */
-    .reprice-strip { display: flex; align-items: center; gap: 1.5rem; padding: 0.6rem 1rem; background: var(--card-alt); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 0.9rem; flex-wrap: wrap; transition: border-color 0.2s, background 0.2s; }
-    .reprice-strip-label { font-size: 0.63rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); flex-shrink: 0; }
-    .reprice-item { display: flex; align-items: center; gap: 0.45rem; font-size: 0.82rem; }
-    .reprice-name { color: var(--muted); }
-    .reprice-val { font-weight: 700; }
-    .reprice-strip.alert { border-color: rgba(245,158,11,0.35); background: rgba(245,158,11,0.04); }
-    .reprice-as-of { margin-left: auto; font-size: 0.7rem; color: var(--muted); }
+.override{
+  display:flex;align-items:center;gap:11px;margin:12px 0 0;
+  background:linear-gradient(90deg,rgba(234,161,60,.10),rgba(234,161,60,.03));
+  border:1px solid rgba(234,161,60,.28);border-left:3px solid var(--gov);
+  border-radius:9px;padding:10px 14px;
+}
+.override .ic{width:16px;height:16px;color:var(--gov);flex:none}
+.override .tx{font-size:12px;color:var(--ink-2);font-family:var(--font-mono);line-height:1.4}
+.override .tx b{color:var(--gov);font-weight:600}
 
-    /* ── CHART DATE NOTICE ── */
-    .chart-date-notice { font-size: 0.75rem; color: var(--yellow); background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.2); border-radius: 6px; padding: 0.4rem 0.75rem; margin-bottom: 0.65rem; }
+.chart-host{position:relative;margin-top:14px;width:100%}
+.chart-host svg{display:block;width:100%;height:auto}
+.chart-note{
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;
+  padding:24px;color:var(--ink-2);font-size:13px;font-family:var(--font-mono);line-height:1.6;pointer-events:none;
+}
+.chart-note .box{max-width:380px;border:1px dashed var(--line-strong);border-radius:10px;padding:18px 22px;background:rgba(8,13,20,.5)}
+.axis-cap{display:flex;justify-content:space-between;margin-top:2px;padding:0 4px}
+.axis-cap span{font-family:var(--font-mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-4)}
 
-    /* ── RANGE TABS (chart) ── */
-    .chart-sub-hd { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem; }
-    .chart-sub-label { font-size: 0.78rem; color: var(--muted); }
-    .range-tabs { display: flex; gap: 0.25rem; }
-    .range-tab { background: transparent; border: 1px solid var(--border); color: var(--muted); padding: 0.3rem 0.75rem; border-radius: 6px; font-size: 0.75rem; cursor: pointer; font-family: inherit; }
-    .range-tab.active { background: var(--blue); border-color: var(--blue); color: #fff; cursor: default; }
-    .range-tab:disabled { opacity: 0.35; cursor: not-allowed; }
+/* tooltip */
+.tip{
+  position:absolute;pointer-events:none;z-index:20;opacity:0;transition:opacity .1s;
+  background:rgba(10,16,25,.96);border:1px solid var(--line-strong);border-radius:9px;
+  padding:9px 11px;min-width:150px;box-shadow:0 18px 40px -16px rgba(0,0,0,.9);transform:translateX(-50%);
+}
+.tip .tt{font-family:var(--font-mono);font-size:10px;letter-spacing:.08em;color:var(--ink-3);margin-bottom:7px;text-transform:uppercase}
+.tip .row{display:flex;align-items:center;justify-content:space-between;gap:16px;font-family:var(--font-mono);font-size:12px;margin-top:3px}
+.tip .row .nm{display:flex;align-items:center;gap:7px;color:var(--ink-2)}
+.tip .row .nm i{width:11px;height:3px;border-radius:2px;display:inline-block}
+.tip .row .vv{font-weight:600;color:var(--ink)}
 
-    /* ── SECTION 2: BENCHMARKS ── */
-    .bench-tabs { display: flex; gap: 0.25rem; }
-    .bench-tab { background: transparent; border: 1px solid var(--border); color: var(--muted); padding: 0.3rem 0.75rem; border-radius: 6px; font-size: 0.75rem; cursor: pointer; font-family: inherit; transition: background 0.15s; }
-    .bench-tab.active { background: var(--blue); border-color: var(--blue); color: #fff; }
+/* ---------- anchor strip ---------- */
+.strip{display:grid;grid-template-columns:repeat(5,1fr);gap:0;padding:0;overflow:hidden}
+.strip .cell{padding:14px 18px;border-right:1px solid var(--line)}
+.strip .cell:last-child{border-right:0}
+.strip .cell .k{font-family:var(--font-mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-4);margin-bottom:7px}
+.strip .cell .v{font-family:var(--font-mono);font-size:14px;color:var(--ink);font-weight:600;display:flex;align-items:center;gap:8px}
+.strip .cell .v small{font-size:11px;color:var(--ink-3);font-weight:500}
+.q-good{color:var(--better)!important}
+.q-warn{color:var(--gov)!important}
+.q-bad{color:var(--worse)!important}
+.q-dot{width:7px;height:7px;border-radius:50%;flex:none}
 
-    .bench-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; }
-    .bench-card { background: var(--card-alt); border: 1px solid var(--border); border-radius: 10px; padding: 1rem 1.25rem; }
-    .bench-product { font-size: 0.63rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-bottom: 0.45rem; }
-    .bench-rate { font-size: 1.9rem; font-weight: 800; letter-spacing: -0.5px; }
-    .bench-source { font-size: 0.68rem; color: var(--muted); margin-top: 0.3rem; }
+/* ---------- error module ---------- */
+.errmod{padding:34px 24px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px}
+.errmod .ic{width:34px;height:34px;color:var(--worse);opacity:.8}
+.errmod .t{font-size:15px;font-weight:600;color:var(--ink)}
+.errmod .d{font-size:12.5px;color:var(--ink-3);font-family:var(--font-mono);max-width:380px;line-height:1.5}
 
-    .bench-table { width: 100%; border-collapse: collapse; }
-    .bench-table th { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); text-align: left; padding: 0.3rem 0; border-bottom: 1px solid var(--border); }
-    .bench-table th:not(:first-child) { text-align: right; }
-    .bench-table td { font-size: 0.88rem; padding: 0.45rem 0; border-bottom: 1px solid rgba(26,51,102,0.5); }
-    .bench-table td:not(:first-child) { text-align: right; }
-    .bench-table .prod-cell { color: var(--muted); font-size: 0.8rem; }
-    .bench-as-of { font-size: 0.68rem; color: var(--muted); margin-top: 0.6rem; }
+/* skeleton */
+.sk{background:linear-gradient(90deg,rgba(148,178,214,.06),rgba(148,178,214,.12),rgba(148,178,214,.06));
+  background-size:200% 100%;animation:sh 1.4s infinite;border-radius:6px;color:transparent!important}
+@keyframes sh{0%{background-position:200% 0}100%{background-position:-200% 0}}
 
-    /* ── SECTION 3: MDI ── */
-    .mdi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; }
-    .mdi-item { background: var(--card-alt); border: 1px solid var(--border); border-radius: 8px; padding: 0.85rem 1rem; }
-    .mdi-label { font-size: 0.63rem; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; color: var(--muted); margin-bottom: 0.4rem; }
-    .mdi-value { font-size: 1.25rem; font-weight: 700; letter-spacing: -0.3px; }
-    .mdi-change { font-size: 0.78rem; font-weight: 600; margin-top: 0.15rem; }
+.foot{margin-top:22px;text-align:center;font-family:var(--font-mono);font-size:10.5px;color:var(--ink-4);letter-spacing:.06em}
 
-    /* ── SECTION 4: ECON CALENDAR ── */
-    .cal-tabs { display: flex; gap: 0.25rem; }
-    .cal-tab { background: transparent; border: 1px solid var(--border); color: var(--muted); padding: 0.35rem 0.85rem; border-radius: 6px; font-size: 0.78rem; cursor: pointer; font-family: inherit; }
-    .cal-tab.active { background: var(--blue); border-color: var(--blue); color: #fff; }
-    .cal-table { width: 100%; border-collapse: collapse; }
-    .cal-table th { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); text-align: left; padding: 0.3rem 0.5rem; border-bottom: 1px solid var(--border); }
-    .cal-table td { font-size: 0.82rem; padding: 0.5rem 0.5rem; border-bottom: 1px solid rgba(26,51,102,0.4); vertical-align: middle; }
-    .impact-high   { display: inline-block; background: rgba(239,68,68,0.15); color: var(--red);    border: 1px solid rgba(239,68,68,0.3);   font-size: 0.65rem; font-weight: 700; letter-spacing: 0.5px; padding: 0.15rem 0.45rem; border-radius: 4px; text-transform: uppercase; }
-    .impact-medium { display: inline-block; background: rgba(245,158,11,0.15); color: var(--yellow); border: 1px solid rgba(245,158,11,0.3); font-size: 0.65rem; font-weight: 700; letter-spacing: 0.5px; padding: 0.15rem 0.45rem; border-radius: 4px; text-transform: uppercase; }
-    .cal-empty { color: var(--muted); font-size: 0.85rem; padding: 1rem 0.5rem; }
-
-    /* ── RESPONSIVE ── */
-    @media (max-width: 1100px) {
-      .bench-cards { grid-template-columns: 1fr 1fr; }
-      .mdi-grid    { grid-template-columns: repeat(4, 1fr); }
-    }
-    @media (max-width: 900px) {
-      .lri-cards   { grid-template-columns: 1fr; }
-      .bench-cards { grid-template-columns: 1fr 1fr; }
-      .mdi-grid    { grid-template-columns: 1fr 1fr; }
-    }
-    @media (max-width: 600px) {
-      .bench-cards { grid-template-columns: 1fr; }
-      .mdi-grid    { grid-template-columns: 1fr 1fr; }
-      .nav-meta    { display: none; }
-    }
-  </style>
+/* ---------- responsive ---------- */
+@media(max-width:1000px){
+  .grid-cards{grid-template-columns:1fr 1fr}
+  .grid-cards .rw{grid-column:1/-1}
+  .strip{grid-template-columns:repeat(2,1fr)}
+  .strip .cell:nth-child(2n){border-right:0}
+  .strip .cell{border-bottom:1px solid var(--line)}
+}
+@media(max-width:680px){
+  body{padding:18px 14px 40px}
+  .grid-cards{grid-template-columns:1fr}
+  .strip{grid-template-columns:1fr}
+  .strip .cell{border-right:0;border-bottom:1px solid var(--line)}
+  .bps-hero .val{font-size:44px}
+  .herorow{align-items:flex-start}
+  .changesince{width:100%;justify-content:space-between}
+  .chart-ctrls{width:100%;justify-content:space-between}
+}
+</style>
 </head>
 <body>
+<div class="wrap" data-screen-label="LRI Section">
 
-<!-- ── LOADING ── -->
-<div id="loading-screen">
-  <div class="spinner"></div>
-  <span>Loading dashboard&hellip;</span>
+  <!-- ===== HEADER ===== -->
+  <header class="topbar">
+    <div class="brand">
+      <div class="mark"><span>LRI</span></div>
+      <div>
+        <h1>LockIQ Rate Impact</h1>
+        <div class="sub">WHOLESALE PRICING INTELLIGENCE</div>
+      </div>
+    </div>
+    <div class="right">
+      <div class="statpill"><span>Session</span><b id="hdrSession">—</b></div>
+      <div class="statpill"><span class="dot" id="hdrDot"></span><span>Signal</span><b id="hdrSignal">LOADING</b></div>
+      <div class="statpill"><span>Updated</span><b id="hdrUpdated" class="mono">—</b></div>
+    </div>
+  </header>
+  <div class="divline"></div>
+
+  <!-- ===== HERO CONTROLS ===== -->
+  <div class="herorow">
+    <div class="title">
+      <div class="eyebrow">Pricing impact since anchor</div>
+      <h2 style="margin-top:8px">Has the market moved enough to care?</h2>
+      <p>LRI estimates whether lender pricing has likely improved or worsened since this morning's rate-sheet anchor — measured in basis points of pricing.</p>
+    </div>
+    <div class="changesince">
+      <span class="lbl">Change since</span>
+      <div class="dd" id="dd">
+        <button class="dd-btn" id="ddBtn" aria-haspopup="listbox" aria-expanded="false">
+          <span class="tk" id="ddTime">7:15 AM</span>
+          <span>Anchor</span>
+          <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <div class="dd-menu" role="listbox">
+          <div class="dd-item active"><span><span class="mono" id="ddOptTime">7:15 AM</span> Anchor</span><span class="tag">Active</span></div>
+          <div class="dd-item disabled"><span>5:00 AM Pre-Market</span><span class="tag">Soon</span></div>
+          <div class="dd-item disabled"><span>Prior Close</span><span class="tag">Soon</span></div>
+          <div class="dd-item disabled"><span>Custom Quote Time</span><span class="tag">Soon</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== CARDS + REPRICE WATCH ===== -->
+  <section class="grid-cards" id="cardsGrid">
+    <!-- injected -->
+  </section>
+
+  <!-- ===== CHART ===== -->
+  <section class="panel chartpanel">
+    <div class="chart-top">
+      <div>
+        <h3 id="chartTitle">LRI Since 7:15 AM</h3>
+        <div class="meta" id="chartMeta">Conventional &amp; Government · basis points vs anchor</div>
+      </div>
+      <div class="chart-ctrls">
+        <div class="toggle" id="govToggle" role="switch" aria-checked="false">
+          <span class="sw"></span>
+          <span class="lab"><span class="swatch"></span>Government</span>
+        </div>
+        <div class="rangebtns">
+          <button class="active" data-range="1D">1D</button>
+          <button data-range="5D" disabled>5D<span class="soon">soon</span></button>
+          <button data-range="1M" disabled>1M<span class="soon">soon</span></button>
+          <button data-range="3M" disabled>3M<span class="soon">soon</span></button>
+        </div>
+      </div>
+    </div>
+
+    <div class="override" id="override" style="display:none">
+      <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg>
+      <div class="tx" id="overrideTx"></div>
+    </div>
+
+    <div class="chart-host" id="chartHost">
+      <div class="chart-note" id="chartNote" style="display:none"><div class="box" id="chartNoteTx"></div></div>
+      <div class="tip" id="tip"></div>
+    </div>
+    <div class="axis-cap">
+      <span id="axisStart">—</span>
+      <span style="color:var(--ink-4)">basis points vs 7:15 AM anchor</span>
+      <span id="axisEnd">—</span>
+    </div>
+  </section>
+
+  <!-- ===== ANCHOR / DATA QUALITY STRIP ===== -->
+  <section class="panel strip" id="strip">
+    <div class="cell"><div class="k">Anchor Time</div><div class="v mono" id="sAnchorTime">—</div></div>
+    <div class="cell"><div class="k">Anchor</div><div class="v" id="sAnchorLabel">—</div></div>
+    <div class="cell"><div class="k">Anchor Status</div><div class="v" id="sAnchorStatus">—</div></div>
+    <div class="cell"><div class="k">Confidence</div><div class="v" id="sConfidence">—</div></div>
+    <div class="cell"><div class="k">Last Updated</div><div class="v mono" id="sUpdated">—</div></div>
+  </section>
+
+  <div class="foot" id="foot">LOCKIQ RATE IMPACT · STANDALONE PROTOTYPE</div>
 </div>
 
-<!-- ── APP SHELL ── -->
-<div id="app-shell">
-
-  <nav>
-    <div class="logo">Lock<span>IQ</span> Rates</div>
-    <div class="nav-right">
-      <div class="nav-meta">
-        <span id="refresh-indicator"></span>
-        <span id="last-updated">—</span>
-      </div>
-      <span id="user-email"></span>
-      <button id="sign-out-btn">Sign out</button>
-    </div>
-  </nav>
-
-  <div class="dashboard">
-
-    <!-- ── SECTION 1: LOCKIQ RATE IMPACT ── -->
-    <div class="dash-section" id="section-lri">
-      <div class="section-hd">
-        <div style="display:flex;align-items:center;gap:.75rem;">
-          <span class="section-title">LockIQ Rate Impact</span>
-          <span id="lri-status-badge" class="badge badge-muted">—</span>
-        </div>
-        <div class="ctrl-group">
-          <span class="ctrl-label">Change Since</span>
-          <select id="change-since-select">
-            <option value="open" selected>Today's Open</option>
-            <option disabled>Yesterday's Close — soon</option>
-            <option disabled>24H — soon</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="lri-cards" id="lri-cards">
-        <div class="lri-card"><div class="lri-product">Loading&hellip;</div></div>
-        <div class="lri-card"><div class="lri-product">Loading&hellip;</div></div>
-      </div>
-
-      <div class="reprice-strip" id="reprice-strip"></div>
-
-      <div id="chart-date-notice" class="chart-date-notice" style="display:none;"></div>
-
-      <div class="chart-sub-hd">
-        <span class="chart-sub-label" id="chart-label">Rate Impact Since Today's Open</span>
-        <div class="range-tabs">
-          <button class="range-tab active">1D</button>
-          <button class="range-tab" disabled>5D &mdash; soon</button>
-          <button class="range-tab" disabled>1M &mdash; soon</button>
-        </div>
-      </div>
-      <div id="lri-chart-wrap"></div>
-    </div>
-
-    <!-- ── SECTION 2: RATE BENCHMARKS ── -->
-    <div class="dash-section" id="section-bench">
-      <div class="section-hd">
-        <span class="section-title">Rate Benchmarks</span>
-        <div class="bench-tabs">
-          <button class="bench-tab active" data-tab="standard">Standard</button>
-          <button class="bench-tab" data-tab="other">Other</button>
-        </div>
-      </div>
-      <div id="bench-content"></div>
-    </div>
-
-    <!-- ── SECTION 3: MARKET DIRECTION INDICATORS ── -->
-    <div class="dash-section" id="section-mdi">
-      <div class="section-hd">
-        <span class="section-title">Market Direction Indicators</span>
-      </div>
-      <div class="mdi-grid" id="mdi-grid"></div>
-    </div>
-
-    <!-- ── SECTION 4: ECONOMIC CALENDAR ── -->
-    <div class="dash-section" id="section-calendar">
-      <div class="section-hd" style="margin-bottom:.75rem;">
-        <span class="section-title">Economic Calendar</span>
-        <div class="cal-tabs">
-          <button class="cal-tab active" data-tab="today">Today</button>
-          <button class="cal-tab" data-tab="tomorrow">Tomorrow</button>
-          <button class="cal-tab" data-tab="week">This Week</button>
-          <button class="cal-tab" data-tab="next">Next Week</button>
-        </div>
-      </div>
-      <div id="cal-content"><p class="cal-empty">Loading&hellip;</p></div>
-    </div>
-
-  </div><!-- /.dashboard -->
-</div><!-- /#app-shell -->
-
-<script src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js"></script>
-
 <script>
-// ════════════════════════════════════════════════════════════════════════════
-// STATE
-// ════════════════════════════════════════════════════════════════════════════
-const state = {
-  lri:       null,   // getPublicLRI response
-  lriPoints: [],     // getPublicLRIChart points array
-  market:    null,   // getMarketData response
-  benchTab:  'standard',
-  calTab:    'today',
-};
+(function(){
+  "use strict";
 
-// ════════════════════════════════════════════════════════════════════════════
-// HELPERS
-// ════════════════════════════════════════════════════════════════════════════
-const $ = id => document.getElementById(id);
-const num = v => { const n = parseFloat(v); return isFinite(n) ? n : null; };
+  /* ---------------- config ---------------- */
+  var EP_CURRENT = "/.netlify/functions/getPublicLRI";
+  var EP_CHART   = "/.netlify/functions/getPublicLRIChart";
+  var IS_PROD = /lockiqrates\.com$/i.test(location.hostname);
 
-function dirClass(n, invert) {
-  if (n == null) return 'neu';
-  if (invert) return n > 0 ? 'neg' : n < 0 ? 'pos' : 'neu';
-  return n > 0 ? 'pos' : n < 0 ? 'neg' : 'neu';
-}
+  /* ---------------- helpers ---------------- */
+  function $(id){return document.getElementById(id);}
+  function pad(n){return n<10?("0"+n):(""+n);}
+  function todayISO(){var d=new Date();return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());}
+  function getParam(k){return new URLSearchParams(location.search).get(k);}
 
-function fmtBps(v) {
-  if (v == null) return '—';
-  return (v >= 0 ? '+' : '') + v.toFixed(1) + ' bps';
-}
-
-function fmtDollars(v) {
-  if (v == null) return '—';
-  if (v === 0) return '$0 / $100k';
-  const sign = v > 0 ? '+' : '-';
-  return `${sign}$${Math.abs(v).toFixed(0)} / $100k`;
-}
-
-function fmtRate(n) {
-  return n == null ? '—' : n.toFixed(3) + '%';
-}
-
-function lriDirClass(d, bps) {
-  if (d === 'BETTER') return 'better';
-  if (d === 'WORSE')  return 'worse';
-  if (d === 'FLAT')   return 'flat';
-  if (bps == null)    return 'flat';
-  return bps > 0 ? 'better' : bps < 0 ? 'worse' : 'flat';
-}
-
-function lriDirLabel(d, bps) {
-  if (d === 'BETTER') return '&#8593; Better';
-  if (d === 'WORSE')  return '&#8595; Worse';
-  if (d === 'FLAT')   return 'Flat';
-  if (bps == null)    return '—';
-  if (bps > 0) return '&#8593; Better';
-  if (bps < 0) return '&#8595; Worse';
-  return 'Flat';
-}
-
-function signalCls(d) {
-  if (d === 'BETTER') return 'signal-better';
-  if (d === 'WORSE')  return 'signal-worse';
-  return 'signal-flat';
-}
-
-function badgeCls(type, v) {
-  if (type === 'status') {
-    if (v === 'OK')      return 'badge-ok';
-    if (v === 'LIMITED') return 'badge-limited';
-    return 'badge-muted';
+  function fmtBps(v){
+    if(v===null||v===undefined||isNaN(v)) return "—";
+    var r=Math.round(v*10)/10;
+    if(Math.abs(r)<0.05) return "0.0";
+    return (r>0?"+":"\u2212")+Math.abs(r).toFixed(1);
   }
-  if (type === 'conf') {
-    if (v === 'GOOD' || v === 'OK') return 'badge-ok';
-    if (v === 'OK_WITH_WARNINGS')   return 'badge-warn';
-    if (v === 'LIMITED')            return 'badge-limited';
-    return 'badge-muted';
+  function fmtDollar(v){
+    if(v===null||v===undefined||isNaN(v)) return "$0";
+    var r=Math.round(v);
+    if(r===0) return "$0";
+    return (r>0?"+$":"\u2212$")+Math.abs(r);
   }
-  return 'badge-muted';
-}
-
-function fmtAnchorTime(t) {
-  if (!t) return null;
-  const [h, m] = t.split(':').map(Number);
-  if (isNaN(h)) return t;
-  const ampm = h < 12 ? 'AM' : 'PM';
-  return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${ampm}`;
-}
-
-// FRED helpers
-function fredVal(cache, key) {
-  if (!cache) return null;
-  const v = cache[key] ?? cache[key.toLowerCase()] ?? cache[key.toUpperCase()];
-  if (v == null) return null;
-  if (typeof v === 'object' && v.latest != null) return num(v.latest);
-  return num(v);
-}
-
-function fredChange(cache, key) {
-  if (!cache) return null;
-  const v = cache[key] ?? cache[key.toLowerCase()] ?? cache[key.toUpperCase()];
-  if (v && typeof v === 'object' && v.change != null) return num(v.change);
-  return null;
-}
-
-function fredDate(cache, key) {
-  if (!cache) return null;
-  const v = cache[key] ?? cache[key.toLowerCase()] ?? cache[key.toUpperCase()];
-  if (v && typeof v === 'object') return v.latestDate ?? v.date ?? null;
-  return null;
-}
-
-// Calendar date utilities
-function etDateString(offsetDays = 0) {
-  const now = new Date();
-  const etOffset = -5 * 60;
-  const et = new Date(now.getTime() + (now.getTimezoneOffset() + etOffset) * 60000);
-  et.setDate(et.getDate() + offsetDays);
-  return et.toISOString().slice(0, 10);
-}
-
-function getWeekRange(weekOffset = 0) {
-  const now = new Date();
-  const etOffset = -5 * 60;
-  const et = new Date(now.getTime() + (now.getTimezoneOffset() + etOffset) * 60000);
-  const day = et.getDay();
-  const monday = new Date(et); monday.setDate(et.getDate() - (day === 0 ? 6 : day - 1) + weekOffset * 7);
-  const friday = new Date(monday); friday.setDate(monday.getDate() + 4);
-  return { start: monday.toISOString().slice(0, 10), end: friday.toISOString().slice(0, 10) };
-}
-
-// SVG chart time label
-function tickTime(ts) {
-  const t = (ts || '').split(' ')[1];
-  return t ? t.slice(0, 5) : '';
-}
-
-// ════════════════════════════════════════════════════════════════════════════
-// DATA FETCHING
-// ════════════════════════════════════════════════════════════════════════════
-async function fetchAll() {
-  $('refresh-indicator').className = 'stale';
-
-  const urlDate = new URLSearchParams(window.location.search).get('date');
-  const todayStr = new Date().toISOString().slice(0, 10);
-
-  // 1. Fetch current LRI snapshot first (chart date depends on it)
-  let lriData = null;
-  try {
-    const r = await fetch('/.netlify/functions/getPublicLRI');
-    if (r.ok) lriData = await r.json();
-  } catch {}
-  if (lriData) state.lri = lriData;
-
-  const chartDate = urlDate || lriData?.trading_date || todayStr;
-
-  // 2. Fetch chart ticks + market data in parallel
-  const [chartR, marketR] = await Promise.allSettled([
-    fetch(`/.netlify/functions/getPublicLRIChart?date=${encodeURIComponent(chartDate)}`)
-      .then(r => r.ok ? r.json() : null).catch(() => null),
-    fetch('/.netlify/functions/getMarketData')
-      .then(r => r.ok ? r.json() : null).catch(() => null),
-  ]);
-
-  if (chartR.status === 'fulfilled' && chartR.value?.ok) {
-    state.lriPoints = chartR.value.points || [];
+  function dirFrom(bps,field){
+    if(field){
+      var f=String(field).toUpperCase();
+      if(f==="BETTER"||f==="UP") return "better";
+      if(f==="WORSE"||f==="DOWN") return "worse";
+      if(f==="FLAT") return "flat";
+    }
+    if(bps>=0.05) return "better";
+    if(bps<=-0.05) return "worse";
+    return "flat";
   }
-  if (marketR.status === 'fulfilled' && marketR.value) {
-    state.market = marketR.value;
+  function dirLabel(d){return d==="better"?"BETTER SINCE ANCHOR":d==="worse"?"WORSE SINCE ANCHOR":"FLAT SINCE ANCHOR";}
+  function badgeLabel(d){return d==="better"?"Better":d==="worse"?"Worse":"Flat";}
+
+  function to12h(hms){ // "07:15:00" -> "7:15 AM"
+    if(!hms) return "";
+    var p=String(hms).split(":"); var h=parseInt(p[0],10), m=p[1]||"00";
+    if(isNaN(h)) return hms;
+    var ap=h>=12?"PM":"AM"; var h12=h%12; if(h12===0)h12=12;
+    return h12+":"+m+" "+ap;
+  }
+  function timeOf(ts){ // "2099-01-01 07:15:00" -> "07:15:00"
+    if(!ts) return "";
+    var parts=String(ts).split(/[ T]/); return parts[1]||parts[0];
+  }
+  function shortTime(ts){var t=timeOf(ts);return to12h(t).replace(/ (AM|PM)/," $1");}
+
+  /* ---------------- demo fallback (preview only) ---------------- */
+  var DEMO_CURRENT = {
+    status:"OK", written_at:"2026-05-29 16:30:44", gov_direction:"FLAT",
+    last_updated:"2026-05-29 16:29:51", anchor_label:"LockIQ Pricing Anchor 7:15 AM",
+    anchor_date:"2026-05-29", conv_dollars_per_100k:-6, conv_lri_bps:-0.6,
+    anchor_status:"GOOD", gov_lri_bps:-0.2, trading_date:"2026-05-29",
+    anchor_time:"07:15:00", conv_direction:"FLAT", gov_dollars_per_100k:-2,
+    confidence:"OK_WITH_WARNINGS", _demo:true
+  };
+  function demoChart(date){
+    // believable intraday wander, ending near current flat values
+    var conv=[0,2.1,3.4,2.6,4.1,3.2,1.4,-0.8,-2.3,-1.1,0.6,1.8,0.9,-0.2,-0.6];
+    var gov =[0,0.9,1.6,1.2,1.9,1.3,0.4,-0.6,-1.2,-0.7,0.1,0.7,0.3,-0.1,-0.2];
+    var startMin=7*60+15, stepMin=38, pts=[];
+    for(var i=0;i<conv.length;i++){
+      var tot=startMin+i*stepMin, h=Math.floor(tot/60), m=tot%60;
+      pts.push({
+        timestamp:date+" "+pad(h)+":"+pad(m)+":00",
+        conv_lri_bps:conv[i], gov_lri_bps:gov[i],
+        conv_dollars_per_100k:Math.round(conv[i]*10), gov_dollars_per_100k:Math.round(gov[i]*10),
+        conv_direction:dirFrom(conv[i]).toUpperCase(), gov_direction:dirFrom(gov[i]).toUpperCase()
+      });
+    }
+    return {ok:true,date:date,count:pts.length,points:pts,_demo:true};
   }
 
-  // Date override notice
-  const notice = $('chart-date-notice');
-  if (urlDate) {
-    notice.textContent = `Test date override active: ${urlDate} — Cards show current LRI. Chart shows data for ${urlDate}.`;
-    notice.style.display = '';
-  } else {
-    notice.style.display = 'none';
+  function fetchJSON(url){
+    return fetch(url,{headers:{accept:"application/json"}}).then(function(r){
+      if(!r.ok) throw new Error("HTTP "+r.status); return r.json();
+    });
   }
 
-  const now = new Date();
-  $('last-updated').textContent = 'Updated ' + now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  $('refresh-indicator').className = '';
-}
+  /* ---------------- state ---------------- */
+  var state={current:null,chart:null,chartDate:null,overrideDate:null,showGov:false,xs:[],points:[]};
 
-// ════════════════════════════════════════════════════════════════════════════
-// SECTION 1 — LRI CARDS + REPRICE STRIP + CHART
-// ════════════════════════════════════════════════════════════════════════════
-function renderLRICards() {
-  const d = state.lri;
-
-  // Status badge
-  const sb = $('lri-status-badge');
-  if (d?.status) {
-    sb.textContent = d.status;
-    sb.className = `badge ${badgeCls('status', d.status)}`;
+  /* ===================================================================
+     RENDER: header
+  =================================================================== */
+  function renderHeader(c){
+    var now=new Date();
+    var sess=(now.getHours()>=8&&now.getHours()<17)?"OPEN":"CLOSED";
+    $("hdrSession").textContent=sess;
+    var conf=(c.confidence||"").toUpperCase();
+    var dot=$("hdrDot");
+    dot.className="dot"+(conf.indexOf("WARN")>=0?" stale":"");
+    $("hdrSignal").textContent = c._demo? "SAMPLE" : "LIVE";
+    $("hdrUpdated").textContent = (c.last_updated||"—").replace(/^.* /,"") || "—";
   }
 
-  // Cards
-  const defs = [
-    { label: 'Conventional', bps: d?.conv_lri_bps, dollars: d?.conv_dollars_per_100k, dir: d?.conv_direction },
-    { label: 'Government',   bps: d?.gov_lri_bps,  dollars: d?.gov_dollars_per_100k,  dir: d?.gov_direction  },
+  /* ===================================================================
+     RENDER: impact cards + reprice watch
+  =================================================================== */
+  function impactCard(name,bps,dollars,dirField){
+    var d=dirFrom(bps,dirField);
+    return ''+
+    '<div class="panel card is-'+d+'">'+
+      '<div class="accentbar"></div>'+
+      '<div class="card-head">'+
+        '<div class="name"><span class="eyebrow">Pricing impact</span><span class="t">'+name+'</span></div>'+
+        '<span class="badge '+d+'"><span class="pip"></span>'+badgeLabel(d)+'</span>'+
+      '</div>'+
+      '<div class="bps-hero"><span class="val">'+fmtBps(bps)+'</span><span class="unit">bps</span></div>'+
+      '<div class="dir-text">'+dirLabel(d)+'</div>'+
+      '<div class="dollar"><span class="k">Per $100k loan</span><span class="v">'+fmtDollar(dollars)+'</span></div>'+
+    '</div>';
+  }
+
+  var RW_LEVELS=[
+    {name:"LOW",      max:3,         col:"var(--flat)"},
+    {name:"WATCH",    max:7,         col:"var(--gov)"},
+    {name:"MODERATE", max:12,        col:"var(--gov)"},
+    {name:"HIGH",     max:20,        col:"var(--worse)"},
+    {name:"EXTREME",  max:Infinity,  col:"var(--worse)"}
   ];
-
-  $('lri-cards').innerHTML = defs.map(c => {
-    const cls     = lriDirClass(c.dir, c.bps);
-    const dirHtml = lriDirLabel(c.dir, c.bps);
-    return `<div class="lri-card">
-      <div class="lri-product">${c.label}</div>
-      <div class="lri-direction ${cls}">${dirHtml}</div>
-      <div class="lri-since">vs Today's Open</div>
-      <div class="lri-bps ${cls}">${fmtBps(c.bps)}</div>
-      <div class="lri-dollars">${fmtDollars(c.dollars)}</div>
-      <span class="signal-badge ${signalCls(c.dir)}">${c.dir || '—'}</span>
-    </div>`;
-  }).join('');
-}
-
-function renderRepriceStrip() {
-  const d = state.lri;
-  const strip = $('reprice-strip');
-
-  if (!d) { strip.innerHTML = ''; return; }
-
-  const convBps = d.conv_lri_bps;
-  const govBps  = d.gov_lri_bps;
-  const alert   = (Math.abs(convBps ?? 0) > 25 || Math.abs(govBps ?? 0) > 25);
-
-  const fmtVal = v => {
-    if (v == null) return '<span class="reprice-val neu">—</span>';
-    const cls = v > 0 ? 'pos' : v < 0 ? 'neg' : 'neu';
-    return `<span class="reprice-val ${cls}">${fmtBps(v)}</span>`;
-  };
-
-  const asOf = d.last_updated ? d.last_updated.slice(11, 16) : '';
-
-  strip.innerHTML = `
-    <span class="reprice-strip-label">Reprice Watch</span>
-    <div class="reprice-item"><span class="reprice-name">Conventional</span>${fmtVal(convBps)}</div>
-    <div class="reprice-item"><span class="reprice-name">Government</span>${fmtVal(govBps)}</div>
-    ${asOf ? `<span class="reprice-as-of">as of ${asOf}</span>` : ''}`;
-
-  strip.classList.toggle('alert', alert);
-}
-
-function renderLRIChart() {
-  const points = state.lriPoints;
-  const wrap   = $('lri-chart-wrap');
-  const d      = state.lri;
-
-  // Chart sub-label
-  const at = fmtAnchorTime(d?.anchor_time);
-  $('chart-label').textContent = at ? `Rate Impact Since ${at}` : "Rate Impact Since Today's Open";
-
-  if (!points || points.length === 0) {
-    wrap.innerHTML = '<div style="color:var(--muted);font-size:.88rem;padding:3rem 0;text-align:center;">No chart data available for this period.</div>';
-    return;
+  function repriceLevel(mag){for(var i=0;i<RW_LEVELS.length;i++){if(mag<RW_LEVELS[i].max)return i;}return 4;}
+  function repriceMsg(idx,move){
+    if(idx===0) return "No meaningful reprice pressure indicated.";
+    if(move<0) return "Pricing pressure has moved worse since anchor. Some lenders may be watching for reprice risk.";
+    return "Pricing has improved meaningfully since anchor. Better pricing may be possible if lenders update.";
+  }
+  function repriceCard(conv,gov){
+    // larger absolute move drives the watch
+    var move = Math.abs(conv)>=Math.abs(gov) ? conv : gov;
+    var mag=Math.abs(move);
+    var idx=repriceLevel(mag);
+    var lvl=RW_LEVELS[idx];
+    var col = idx===0?"var(--flat)":(move<0? RW_LEVELS[idx].col : "var(--better)");
+    var segs="",labels="";
+    for(var i=0;i<5;i++){
+      var on=i<=idx;
+      segs+='<div class="seg'+(on?' on':'')+'" style="--segcol:'+(on?col:'')+'"></div>';
+      labels+='<span class="'+(i===idx?'cur':'')+'">'+RW_LEVELS[i].name+'</span>';
+    }
+    return ''+
+    '<div class="panel rw">'+
+      '<div class="rw-head"><div class="t">'+
+        '<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22a8 8 0 0 0 8-8c0-3.5-2.5-6-4-8-.6 1.5-1.5 2.2-2.5 2.8C12 7 11 5.5 11 3 8.5 5 5 8 5 14a8 8 0 0 0 7 8Z"/></svg>'+
+        'Reprice Watch</div>'+
+        '<span class="eyebrow">Larger move</span>'+
+      '</div>'+
+      '<div class="rw-level"><span class="lv" style="color:'+col+'">'+lvl.name+'</span>'+
+        '<span class="mv">'+fmtBps(move)+' bps move</span></div>'+
+      '<div class="meter">'+segs+'</div>'+
+      '<div class="meter-labels">'+labels+'</div>'+
+      '<div class="rw-msg">'+repriceMsg(idx,move)+'</div>'+
+    '</div>';
   }
 
-  const W = 800, H = 220;
-  const PL = 52, PR = 20, PT = 24, PB = 32;
-  const pw = W - PL - PR, ph = H - PT - PB;
-  const n = points.length;
+  function renderCards(c){
+    $("cardsGrid").innerHTML =
+      impactCard("Conventional LRI", c.conv_lri_bps, c.conv_dollars_per_100k, c.conv_direction)+
+      impactCard("Government LRI",   c.gov_lri_bps,  c.gov_dollars_per_100k,  c.gov_direction)+
+      repriceCard(c.conv_lri_bps||0, c.gov_lri_bps||0);
+  }
+  function renderCardsError(){
+    $("cardsGrid").innerHTML =
+      '<div class="panel errmod" style="grid-column:1/-1">'+
+        '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>'+
+        '<div class="t">LRI current signal unavailable.</div>'+
+        '<div class="d">We couldn\'t reach the LockIQ pricing signal. Cards will populate once the signal is restored.</div>'+
+      '</div>';
+    $("hdrSignal").textContent="OFFLINE";
+    $("hdrDot").className="dot dead";
+  }
 
-  const allVals = [
-    ...points.map(p => p.conv_lri_bps),
-    ...points.map(p => p.gov_lri_bps),
-    0,
-  ].filter(v => v != null);
+  /* ===================================================================
+     RENDER: strip
+  =================================================================== */
+  function qClass(s){s=(s||"").toUpperCase();if(s.indexOf("GOOD")>=0||s==="OK")return"q-good";if(s.indexOf("WARN")>=0)return"q-warn";if(s.indexOf("BAD")>=0||s.indexOf("STALE")>=0)return"q-bad";return"q-good";}
+  function renderStrip(c){
+    $("sAnchorTime").textContent = c.anchor_time||"—";
+    $("sAnchorLabel").textContent = (c.anchor_label||"—").replace("LockIQ Pricing Anchor","").trim()||c.anchor_label||"—";
+    var asCls=qClass(c.anchor_status);
+    $("sAnchorStatus").innerHTML='<span class="q-dot '+asCls+'" style="background:currentColor"></span><span class="'+asCls+'">'+(c.anchor_status||"—")+'</span>';
+    var cfCls=qClass(c.confidence);
+    $("sConfidence").innerHTML='<span class="'+cfCls+'">'+(c.confidence||"—")+'</span>';
+    $("sUpdated").textContent = c.last_updated||"—";
+  }
 
-  let yMin = Math.min(...allVals), yMax = Math.max(...allVals);
-  const pad = (yMax - yMin || 2) * 0.18;
-  yMin -= pad; yMax += pad;
+  /* ===================================================================
+     RENDER: chart (native SVG)
+  =================================================================== */
+  function num(v){return (v===null||v===undefined||isNaN(v))?null:Number(v);}
 
-  const range = yMax - yMin || 1;
-  const toX = i => PL + (n > 1 ? (i / (n - 1)) * pw : pw / 2);
-  const toY = v => PT + ph - ((v - yMin) / range) * ph;
+  function renderChart(){
+    var host=$("chartHost");
+    var note=$("chartNote"), noteTx=$("chartNoteTx");
+    // remove previous svg
+    var old=host.querySelector("svg"); if(old) old.remove();
 
-  const polyline = key => points
-    .filter(p => p[key] != null)
-    .map((_, i, arr) => {
-      const orig = points.indexOf(arr[i]);
-      return `${toX(orig).toFixed(1)},${toY(points[orig][key]).toFixed(1)}`;
-    })
-    .join(' ');
+    var pts=state.points||[];
+    if(!pts.length){
+      note.style.display="flex";
+      noteTx.textContent="No LRI chart points available for this date yet.";
+      $("axisStart").textContent="—";$("axisEnd").textContent="—";
+      return;
+    }
+    if(pts.length===1){
+      note.style.display="none";
+      // draw single dot + note overlay
+    } else {
+      note.style.display="none";
+    }
 
-  // Build polylines properly: only connected segments where data exists
-  const polylineStr = key => {
-    const parts = [];
-    points.forEach((p, i) => {
-      if (p[key] != null) parts.push(`${toX(i).toFixed(1)},${toY(p[key]).toFixed(1)}`);
+    var W=host.clientWidth||900, H=340;
+    var padL=58,padR=70,padT=26,padB=38;
+    var plotW=W-padL-padR, plotH=H-padT-padB;
+
+    // y domain symmetric around 0
+    var maxAbs=2;
+    pts.forEach(function(p){
+      var cv=num(p.conv_lri_bps); if(cv!==null) maxAbs=Math.max(maxAbs,Math.abs(cv));
+      if(state.showGov){var gv=num(p.gov_lri_bps); if(gv!==null) maxAbs=Math.max(maxAbs,Math.abs(gv));}
     });
-    return parts.join(' ');
-  };
+    maxAbs=Math.ceil(maxAbs*1.25);
+    var yMin=-maxAbs,yMax=maxAbs;
 
-  const zY   = toY(0).toFixed(1);
-  const midI = Math.floor(n / 2);
+    function sx(i){return pts.length===1? padL+plotW/2 : padL+(i/(pts.length-1))*plotW;}
+    function sy(v){return padT+(1-(v-yMin)/(yMax-yMin))*plotH;}
+    var yZero=sy(0);
 
-  const zYn = parseFloat(zY);
-  const greenH  = Math.max(0, Math.min(zYn - PT, ph));
-  const redTop  = Math.max(PT, zYn);
-  const redH    = Math.max(0, PT + ph - redTop);
+    state.xs=pts.map(function(_,i){return sx(i);});
 
-  const gridLines = [yMax, 0, yMin].map(v =>
-    `<line x1="${PL}" y1="${toY(v).toFixed(1)}" x2="${W - PR}" y2="${toY(v).toFixed(1)}" stroke="#1a3366" stroke-width="1"/>`
-  ).join('');
+    var NS="http://www.w3.org/2000/svg";
+    var svg=document.createElementNS(NS,"svg");
+    svg.setAttribute("viewBox","0 0 "+W+" "+H);
+    svg.setAttribute("width",W); svg.setAttribute("height",H);
 
-  const yLabels = [yMax, 0, yMin].map(v =>
-    `<text x="${PL - 6}" y="${toY(v).toFixed(1)}" text-anchor="end" dominant-baseline="middle" fill="#8aaad4" font-size="11" font-family="system-ui,sans-serif">${(v >= 0 ? '+' : '') + v.toFixed(1)}</text>`
-  ).join('');
+    // defs: area gradient with zero crossing
+    var zf=(yZero-padT)/plotH;
+    var defs=
+      '<defs>'+
+        '<linearGradient id="areaGrad" x1="0" y1="'+padT+'" x2="0" y2="'+(padT+plotH)+'" gradientUnits="userSpaceOnUse">'+
+          '<stop offset="0" stop-color="#3ad29a" stop-opacity="0.22"/>'+
+          '<stop offset="'+Math.max(0,zf-0.001)+'" stop-color="#3ad29a" stop-opacity="0.02"/>'+
+          '<stop offset="'+Math.min(1,zf+0.001)+'" stop-color="#e0564c" stop-opacity="0.02"/>'+
+          '<stop offset="1" stop-color="#e0564c" stop-opacity="0.22"/>'+
+        '</linearGradient>'+
+        '<filter id="glowT" x="-30%" y="-60%" width="160%" height="220%"><feGaussianBlur stdDeviation="3.2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>'+
+      '</defs>';
 
-  const xLabels = [
-    `<text x="${PL}" y="${H - 6}" text-anchor="start" fill="#8aaad4" font-size="11" font-family="system-ui,sans-serif">${tickTime(points[0].timestamp)}</text>`,
-    n > 2 ? `<text x="${toX(midI).toFixed(1)}" y="${H - 6}" text-anchor="middle" fill="#8aaad4" font-size="11" font-family="system-ui,sans-serif">${tickTime(points[midI].timestamp)}</text>` : '',
-    `<text x="${W - PR}" y="${H - 6}" text-anchor="end" fill="#8aaad4" font-size="11" font-family="system-ui,sans-serif">${tickTime(points[n - 1].timestamp)}</text>`,
-  ].join('');
-
-  wrap.innerHTML = `
-<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:260px;display:block;">
-  <defs>
-    <clipPath id="chartClip"><rect x="${PL}" y="${PT}" width="${pw}" height="${ph}"/></clipPath>
-  </defs>
-  <rect x="${PL}" y="${PT}" width="${pw}" height="${greenH}" fill="rgba(34,197,94,0.05)"/>
-  <rect x="${PL}" y="${redTop}" width="${pw}" height="${redH}" fill="rgba(239,68,68,0.05)"/>
-  ${gridLines}
-  <line x1="${PL}" y1="${zY}" x2="${W - PR}" y2="${zY}" stroke="#2a4480" stroke-width="1.5" stroke-dasharray="5,4"/>
-  <polyline clip-path="url(#chartClip)" points="${polylineStr('conv_lri_bps')}" fill="none" stroke="#22d3ee" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
-  <polyline clip-path="url(#chartClip)" points="${polylineStr('gov_lri_bps')}"  fill="none" stroke="#f5a623" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
-  ${yLabels}
-  ${xLabels}
-  <circle cx="${W - 88}" cy="13" r="4" fill="#22d3ee"/>
-  <text x="${W - 81}" y="17" fill="#e8edf5" font-size="11" font-family="system-ui,sans-serif">Conv</text>
-  <circle cx="${W - 42}" cy="13" r="4" fill="#f5a623"/>
-  <text x="${W - 35}" y="17" fill="#e8edf5" font-size="11" font-family="system-ui,sans-serif">Gov</text>
-</svg>`;
-}
-
-function renderLRI() {
-  renderLRICards();
-  renderRepriceStrip();
-  renderLRIChart();
-}
-
-// ════════════════════════════════════════════════════════════════════════════
-// SECTION 2 — RATE BENCHMARKS
-// ════════════════════════════════════════════════════════════════════════════
-function renderBenchmarks() {
-  const br   = state.market?.broker_rates;
-  const fred = state.market?.fred_cache;
-  const el   = $('bench-content');
-
-  if (state.benchTab === 'standard') {
-    const cards = [
-      { label: '30Y Conventional', val: num(br?.conv30)  },
-      { label: '30Y FHA',          val: num(br?.fha30)   },
-      { label: '30Y VA',           val: num(br?.va30)    },
-      { label: '30Y Jumbo',        val: num(br?.jumbo30) },
-    ];
-    const asOf = br?.as_of ? ` &middot; ${br.as_of}` : '';
-    el.innerHTML = `<div class="bench-cards">${
-      cards.map(c => `<div class="bench-card">
-        <div class="bench-product">${c.label}</div>
-        <div class="bench-rate">${c.val != null ? c.val.toFixed(3) + '%' : '—'}</div>
-        <div class="bench-source">Pipeline${asOf}</div>
-      </div>`).join('')
-    }</div>`;
-
-  } else {
-    // Other tab: PMMS + Optimal Blue + Fed/Prime
-    const obDate  = fredDate(fred, 'OBMMIC30YF');
-    const obLabel = obDate ? `Optimal Blue &middot; ${obDate}` : 'Optimal Blue';
-
-    const rows = [
-      { label: 'PMMS 30Y Fixed', val: fredVal(fred, 'MORTGAGE30US'),  chg: null, src: 'Freddie Mac PMMS' },
-      { label: 'PMMS 15Y Fixed', val: fredVal(fred, 'MORTGAGE15US'),  chg: null, src: 'Freddie Mac PMMS' },
-      { label: 'OB 30Y Conv',    val: fredVal(fred, 'OBMMIC30YF'),    chg: fredChange(fred, 'OBMMIC30YF'),   src: obLabel },
-      { label: 'OB 30Y FHA',     val: fredVal(fred, 'OBMMIFHA30YF'), chg: fredChange(fred, 'OBMMIFHA30YF'), src: obLabel },
-      { label: 'OB 30Y VA',      val: fredVal(fred, 'OBMMIVA30YF'),  chg: fredChange(fred, 'OBMMIVA30YF'),  src: obLabel },
-      { label: 'Fed Funds Rate',  val: fredVal(fred, 'FEDFUNDS') ?? fredVal(fred, 'DFEDTARU'), chg: null, src: 'FRED' },
-      { label: 'Prime Rate',      val: fredVal(fred, 'DPRIME'),       chg: null, src: 'FRED' },
-    ];
-
-    el.innerHTML = `<table class="bench-table">
-      <thead><tr>
-        <th>Product</th>
-        <th>Rate</th>
-        <th>Wk Chg</th>
-        <th>Source</th>
-      </tr></thead>
-      <tbody>${rows.map(r => {
-        const valStr = r.val != null ? r.val.toFixed(r.val >= 10 ? 2 : 3) + '%' : '—';
-        const chgStr = r.chg != null
-          ? `<span class="${dirClass(r.chg, true)}">${r.chg > 0 ? '+' : ''}${r.chg.toFixed(2)}</span>`
-          : '<span style="color:var(--muted)">—</span>';
-        return `<tr>
-          <td class="prod-cell">${r.label}</td>
-          <td>${valStr}</td>
-          <td>${chgStr}</td>
-          <td style="color:var(--muted);font-size:.75rem">${r.src}</td>
-        </tr>`;
-      }).join('')}</tbody>
-    </table>`;
-  }
-}
-
-// ════════════════════════════════════════════════════════════════════════════
-// SECTION 3 — MARKET DIRECTION INDICATORS
-// ════════════════════════════════════════════════════════════════════════════
-function renderMDI() {
-  const sb   = state.market?.shadow_bonds;
-  const fred = state.market?.fred_cache;
-
-  const us10y    = num(sb?.US10Y_Current);
-  const us30y    = num(sb?.US30Y_Current);
-  const us10yChg = num(sb?.US10Y_Daily_Change);
-  const us30yChg = num(sb?.US30Y_Daily_Change);
-  const zn       = num(sb?.ZN1_Current);
-  const znChg    = num(sb?.ZN1_Daily_Change);
-  const mbb      = num(sb?.MBB_Shadow ?? sb?.MBB_Current);
-  const mbbChg   = num(sb?.MBB_Shadow_Daily_Change ?? sb?.MBB_Daily_Change);
-
-  const spread1030    = (us10y != null && us30y != null) ? (us30y - us10y) * 100 : null;
-  const obmmic        = fredVal(fred, 'OBMMIC30YF');
-  const mbsTreasury   = (obmmic != null && us10y != null) ? obmmic - us10y : null;
-
-  const chgBps = (v, invert = false) => {
-    if (v == null) return '<span style="color:var(--muted)">—</span>';
-    const bps = (v * 100).toFixed(1);
-    const cls = dirClass(v, invert);
-    return `<span class="${cls}">${v > 0 ? '+' : ''}${bps} bps</span>`;
-  };
-
-  const chgPts = (v, dec = 3) => {
-    if (v == null) return '<span style="color:var(--muted)">—</span>';
-    const cls = dirClass(v, false);
-    return `<span class="${cls}">${v > 0 ? '+' : ''}${v.toFixed(dec)}</span>`;
-  };
-
-  const items = [
-    { label: 'US 10Y Yield',       value: us10y != null ? us10y.toFixed(3) + '%' : '—', change: chgBps(us10yChg, true),  suffix: 'today' },
-    { label: 'US 30Y Yield',       value: us30y != null ? us30y.toFixed(3) + '%' : '—', change: chgBps(us30yChg, true),  suffix: 'today' },
-    { label: 'ZN Futures',         value: zn    != null ? zn.toFixed(3)            : '—', change: chgPts(znChg),          suffix: 'today' },
-    { label: 'MBB ETF',            value: mbb   != null ? mbb.toFixed(2)           : '—', change: chgPts(mbbChg, 2),      suffix: 'today' },
-    { label: '10s/30s Spread',     value: spread1030  != null ? spread1030.toFixed(1)  + ' bps' : '—', change: null, suffix: '' },
-    { label: 'MBS–Treasury',       value: mbsTreasury != null ? mbsTreasury.toFixed(2) + '%'    : '—', change: null, suffix: '' },
-    { label: '2s/10s Spread',      value: '—', change: null, suffix: '' },
-    { label: 'Primary–Secondary',  value: '—', change: null, suffix: '' },
-  ];
-
-  $('mdi-grid').innerHTML = items.map(item => `
-    <div class="mdi-item">
-      <div class="mdi-label">${item.label}</div>
-      <div class="mdi-value">${item.value}</div>
-      <div class="mdi-change">${item.change != null ? item.change + (item.suffix ? ' ' + item.suffix : '') : '<span style="color:var(--muted)">—</span>'}</div>
-    </div>`).join('');
-}
-
-// ════════════════════════════════════════════════════════════════════════════
-// SECTION 4 — ECONOMIC CALENDAR
-// ════════════════════════════════════════════════════════════════════════════
-function renderCalendar() {
-  const el = $('cal-content');
-  if (!state.market) { el.innerHTML = '<p class="cal-empty">No calendar data</p>'; return; }
-
-  const pad = n => String(n).padStart(2, '0');
-  const tmr = new Date(); tmr.setDate(tmr.getDate() + 1);
-  const tomorrowStr = `${tmr.getFullYear()}-${pad(tmr.getMonth()+1)}-${pad(tmr.getDate())}`;
-  const thisWeek = getWeekRange(0);
-  const nextWeek = getWeekRange(1);
-
-  let rawEvents;
-  if (state.calTab === 'today') {
-    rawEvents = state.market.econ_calendar_today?.events || [];
-  } else if (state.calTab === 'tomorrow') {
-    rawEvents = (state.market.econ_calendar_upcoming?.events || []).filter(e => e.date === tomorrowStr);
-  } else if (state.calTab === 'week') {
-    rawEvents = (state.market.econ_calendar_upcoming?.events || []).filter(e => e.date >= thisWeek.start && e.date <= thisWeek.end);
-  } else {
-    rawEvents = (state.market.econ_calendar_upcoming?.events || []).filter(e => e.date >= nextWeek.start && e.date <= nextWeek.end);
-  }
-
-  const events = rawEvents.filter(e => e.impact_label !== 'Low' || e.star_event === true);
-
-  if (events.length === 0) {
-    el.innerHTML = '<p class="cal-empty">No events for this period</p>';
-    return;
-  }
-
-  const showDate = state.calTab !== 'today';
-  const dateHdr  = showDate ? '<th>Date</th>' : '';
-
-  const rows = events.map(e => {
-    const badge    = e.impact_label === 'High'
-      ? '<span class="impact-high">HIGH</span>'
-      : '<span class="impact-medium">MED</span>';
-    const forecast = (e.forecast != null && e.forecast !== '') ? e.forecast : '—';
-    const actual   = (e.actual   != null && e.actual   !== '') ? e.actual   : null;
-    const dateCell = showDate ? `<td style="color:var(--muted)">${e.date || ''}</td>` : '';
-    return `<tr>
-      ${dateCell}
-      <td style="color:var(--muted);white-space:nowrap">${e.time || '—'}</td>
-      <td>${e.event || ''}</td>
-      <td>${badge}</td>
-      <td style="text-align:right;color:var(--muted)">${forecast}</td>
-      <td style="text-align:right">${actual != null ? actual : '<span style="color:var(--muted)">—</span>'}</td>
-    </tr>`;
-  }).join('');
-
-  el.innerHTML = `<table class="cal-table">
-    <thead><tr>${dateHdr}<th>Time (ET)</th><th>Event</th><th>Impact</th><th style="text-align:right">Forecast</th><th style="text-align:right">Actual</th></tr></thead>
-    <tbody>${rows}</tbody>
-  </table>`;
-}
-
-// ════════════════════════════════════════════════════════════════════════════
-// RENDER ALL
-// ════════════════════════════════════════════════════════════════════════════
-function renderAll() {
-  renderLRI();
-  renderBenchmarks();
-  renderMDI();
-  renderCalendar();
-}
-
-// ════════════════════════════════════════════════════════════════════════════
-// INIT
-// ════════════════════════════════════════════════════════════════════════════
-async function initDashboard() {
-  // Benchmark tab switcher
-  document.querySelectorAll('.bench-tab').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.bench-tab').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      state.benchTab = btn.dataset.tab;
-      renderBenchmarks();
+    // gridlines (y)
+    var grid="";
+    var ticks=[yMax, yMax/2, 0, yMin/2, yMin];
+    ticks.forEach(function(tv){
+      var y=sy(tv); var isZero=Math.abs(tv)<0.001;
+      grid+='<line x1="'+padL+'" y1="'+y+'" x2="'+(W-padR)+'" y2="'+y+'" stroke="'+(isZero?'rgba(231,238,247,.32)':'rgba(148,178,214,.08)')+'" stroke-width="'+(isZero?1.2:1)+'" '+(isZero?'':'stroke-dasharray="2 5"')+'/>';
+      var lbl=(tv>0?"+":"")+Math.round(tv);
+      grid+='<text x="'+(padL-10)+'" y="'+(y+3.5)+'" text-anchor="end" font-family="IBM Plex Mono,monospace" font-size="10.5" fill="'+(isZero?'#9fb0c6':'#6c7c92')+'">'+(isZero?"0":lbl)+'</text>';
     });
-  });
+    // better / worse y captions (inside plot, avoid gutter collision)
+    grid+='<text x="'+(padL+8)+'" y="'+(padT+13)+'" text-anchor="start" font-family="IBM Plex Mono,monospace" font-size="8.5" fill="#3ad29a" fill-opacity="0.7" letter-spacing="1.5">BETTER ▲</text>';
+    grid+='<text x="'+(padL+8)+'" y="'+(padT+plotH-6)+'" text-anchor="start" font-family="IBM Plex Mono,monospace" font-size="8.5" fill="#e0564c" fill-opacity="0.7" letter-spacing="1.5">WORSE ▼</text>';
+    grid+='<text x="'+(W-padR+8)+'" y="'+(yZero+3.5)+'" text-anchor="start" font-family="IBM Plex Mono,monospace" font-size="8.5" fill="#9fb0c6" letter-spacing="1">ANCHOR</text>';
 
-  // Calendar tab switcher
-  document.querySelectorAll('.cal-tab').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.cal-tab').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      state.calTab = btn.dataset.tab;
-      renderCalendar();
-    });
-  });
-
-  // Initial load
-  await fetchAll();
-  renderAll();
-
-  // Auto-refresh every 60 seconds
-  setInterval(async () => {
-    await fetchAll();
-    renderAll();
-  }, 60000);
-}
-
-// ════════════════════════════════════════════════════════════════════════════
-// CLERK AUTH GATE
-// ════════════════════════════════════════════════════════════════════════════
-(async () => {
-  const loading  = $('loading-screen');
-  const appShell = $('app-shell');
-  const params   = new URLSearchParams(window.location.search);
-
-  function showApp(email) {
-    loading.style.display  = 'none';
-    appShell.style.display = 'block';
-    $('user-email').textContent = email || '';
-    initDashboard();
-  }
-
-  async function goToCheckout(token) {
-    const res = await fetch('/.netlify/functions/createCheckoutSession', {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${token}` },
-    });
-    if (!res.ok) throw new Error('createCheckoutSession failed');
-    const { url } = await res.json();
-    window.location.href = url;
-  }
-
-  // Try Clerk
-  let clerk = null;
-  try {
-    const res = await fetch('/.netlify/functions/getConfig');
-    if (res.ok) {
-      const { clerkPublishableKey } = await res.json();
-      if (window.Clerk && clerkPublishableKey) {
-        await window.Clerk.load({ publishableKey: clerkPublishableKey });
-        clerk = window.Clerk;
+    // x ticks (~5)
+    var xc=Math.min(5,pts.length);
+    var xticks="";
+    if(pts.length>1){
+      for(var t=0;t<xc;t++){
+        var idx=Math.round(t/(xc-1)*(pts.length-1));
+        var x=sx(idx);
+        xticks+='<text x="'+x+'" y="'+(H-14)+'" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="10" fill="#6c7c92">'+shortTime(pts[idx].timestamp)+'</text>';
       }
     }
-  } catch { /* Clerk unavailable */ }
 
-  // No Clerk → dev mode, show ungated
-  if (!clerk) {
-    showApp('');
-    $('sign-out-btn').style.display = 'none';
-    return;
-  }
-
-  // Must be signed in
-  if (!clerk.user) { window.location.href = '/'; return; }
-
-  const email = clerk.user.primaryEmailAddress?.emailAddress || '';
-  const token = await clerk.session.getToken();
-
-  $('sign-out-btn').addEventListener('click', async () => {
-    await clerk.signOut();
-    window.location.href = '/';
-  });
-
-  // New signup → Stripe
-  if (params.get('checkout') === '1') {
-    history.replaceState(null, '', '/proto.html');
-    try { await goToCheckout(token); } catch { showApp(email); }
-    return;
-  }
-
-  // Returning from Stripe → show optimistically
-  if (params.get('checkout') === 'complete') {
-    history.replaceState(null, '', '/proto.html');
-    showApp(email);
-    return;
-  }
-
-  // Normal visit → check subscription
-  try {
-    const res = await fetch('/.netlify/functions/checkSubscription', {
-      headers: { 'Authorization': `Bearer ${token}` },
-    });
-    if (!res.ok) throw new Error();
-    const { status } = await res.json();
-    if (status === 'active') {
-      showApp(email);
-    } else {
-      await goToCheckout(token);
+    // build conv line + area
+    function pathFor(key){
+      var d="";
+      pts.forEach(function(p,i){
+        var v=num(p[key]); if(v===null) return;
+        d+=(d===""?"M":"L")+sx(i).toFixed(1)+" "+sy(v).toFixed(1)+" ";
+      });
+      return d.trim();
     }
-  } catch {
-    showApp(email);
+    var convPath=pathFor("conv_lri_bps");
+    var convArea=convPath? (convPath+" L"+sx(pts.length-1).toFixed(1)+" "+yZero.toFixed(1)+" L"+sx(0).toFixed(1)+" "+yZero.toFixed(1)+" Z") : "";
+
+    var govDraw="";
+    if(state.showGov){
+      var govPath=pathFor("gov_lri_bps");
+      govDraw='<path d="'+govPath+'" fill="none" stroke="#eaa13c" stroke-width="1.8" stroke-dasharray="5 4" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>';
+    }
+
+    var convDraw="";
+    if(pts.length>1){
+      convDraw=
+        '<path d="'+convArea+'" fill="url(#areaGrad)"/>'+
+        '<path d="'+convPath+'" fill="none" stroke="#21c7c0" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" filter="url(#glowT)"/>';
+    }
+
+    // latest point highlight (conv)
+    var lastI=pts.length-1, lcv=num(pts[lastI].conv_lri_bps);
+    var lastDot="";
+    if(lcv!==null){
+      var lx=sx(lastI),ly=sy(lcv);
+      lastDot=
+        '<circle cx="'+lx+'" cy="'+ly+'" r="8" fill="#21c7c0" opacity="0.16"/>'+
+        '<circle cx="'+lx+'" cy="'+ly+'" r="4.4" fill="#0a111c" stroke="#21c7c0" stroke-width="2.4"/>';
+      // value label chip
+      var chipY=Math.max(padT+10,Math.min(ly-14,padT+plotH-10));
+      lastDot+='<g><rect x="'+(lx-(pts.length>1?0:0))+'" y="0" width="0" height="0"/></g>';
+    }
+    // single point note
+    var singleNote="";
+    if(pts.length===1){
+      var sxs=sx(0),sys=sy(lcv===null?0:lcv);
+      singleNote='<circle cx="'+sxs+'" cy="'+sys+'" r="8" fill="#21c7c0" opacity="0.16"/><circle cx="'+sxs+'" cy="'+sys+'" r="4.4" fill="#0a111c" stroke="#21c7c0" stroke-width="2.4"/>';
+    }
+
+    // hover layer
+    var hover='<line id="crossX" x1="0" y1="'+padT+'" x2="0" y2="'+(padT+plotH)+'" stroke="rgba(33,199,192,.4)" stroke-width="1" opacity="0"/>'+
+      '<circle id="hoverConv" r="4" fill="#21c7c0" stroke="#0a111c" stroke-width="2" opacity="0"/>'+
+      '<circle id="hoverGov" r="3.5" fill="#eaa13c" stroke="#0a111c" stroke-width="2" opacity="0"/>'+
+      '<rect id="hitArea" x="'+padL+'" y="'+padT+'" width="'+plotW+'" height="'+plotH+'" fill="transparent"/>';
+
+    svg.innerHTML=defs+grid+xticks+convDraw+govDraw+lastDot+singleNote+hover;
+    host.insertBefore(svg,host.firstChild);
+
+    // axis caption
+    $("axisStart").textContent=shortTime(pts[0].timestamp);
+    $("axisEnd").textContent=shortTime(pts[lastI].timestamp);
+
+    // single point note overlay
+    if(pts.length===1){
+      note.style.display="flex";
+      noteTx.textContent="Only one LRI tick available. Chart line will appear after more ticks are collected.";
+    }
+
+    // wire hover
+    wireHover(svg,pts,sx,sy);
   }
+
+  function wireHover(svg,pts,sx,sy){
+    if(pts.length<2) return;
+    var hit=svg.querySelector("#hitArea");
+    var cross=svg.querySelector("#crossX");
+    var hc=svg.querySelector("#hoverConv");
+    var hg=svg.querySelector("#hoverGov");
+    var tip=$("tip");
+    var host=$("chartHost");
+
+    function nearest(clientX){
+      var rect=svg.getBoundingClientRect();
+      var scale=rect.width/svg.viewBox.baseVal.width;
+      var px=(clientX-rect.left)/scale;
+      var best=0,bd=1e9;
+      for(var i=0;i<pts.length;i++){var d=Math.abs(sx(i)-px);if(d<bd){bd=d;best=i;}}
+      return best;
+    }
+    function move(e){
+      var cx=(e.touches?e.touches[0].clientX:e.clientX);
+      var i=nearest(cx);var p=pts[i];
+      var cv=num(p.conv_lri_bps),gv=num(p.gov_lri_bps);
+      var x=sx(i);
+      cross.setAttribute("x1",x);cross.setAttribute("x2",x);cross.setAttribute("opacity","1");
+      if(cv!==null){hc.setAttribute("cx",x);hc.setAttribute("cy",sy(cv));hc.setAttribute("opacity","1");}else hc.setAttribute("opacity","0");
+      if(state.showGov&&gv!==null){hg.setAttribute("cx",x);hg.setAttribute("cy",sy(gv));hg.setAttribute("opacity","1");}else hg.setAttribute("opacity","0");
+      // tooltip
+      var rows='<div class="row"><span class="nm"><i style="background:#21c7c0"></i>Conventional</span><span class="vv">'+fmtBps(cv)+' bps</span></div>';
+      if(state.showGov) rows+='<div class="row"><span class="nm"><i style="background:#eaa13c"></i>Government</span><span class="vv">'+fmtBps(gv)+' bps</span></div>';
+      tip.innerHTML='<div class="tt">'+shortTime(p.timestamp)+'</div>'+rows;
+      tip.style.opacity="1";
+      var rect=svg.getBoundingClientRect();
+      var scale=rect.width/svg.viewBox.baseVal.width;
+      var leftPx=x*scale;
+      tip.style.left=Math.max(70,Math.min(host.clientWidth-78,leftPx))+"px";
+      tip.style.top=(sy(cv===null?0:cv)*scale - tip.offsetHeight - 14)+"px";
+      tip.style.transform="translateX(-50%)";
+    }
+    function leave(){cross.setAttribute("opacity","0");hc.setAttribute("opacity","0");hg.setAttribute("opacity","0");$("tip").style.opacity="0";}
+    hit.addEventListener("mousemove",move);
+    hit.addEventListener("mouseleave",leave);
+    hit.addEventListener("touchmove",function(e){move(e);},{passive:true});
+    hit.addEventListener("touchend",leave);
+  }
+
+  /* ===================================================================
+     load + orchestrate
+  =================================================================== */
+  function applyAnchorLabels(c){
+    var t12=to12h(c.anchor_time||"07:15:00");
+    $("ddTime").textContent=t12;$("ddOptTime").textContent=t12;
+    $("chartTitle").textContent="LRI Since "+t12;
+  }
+
+  function setChartError(){
+    var host=$("chartHost");
+    var old=host.querySelector("svg"); if(old) old.remove();
+    $("chartNote").style.display="flex";
+    $("chartNoteTx").innerHTML='<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#e0564c" stroke-width="1.6" style="margin-bottom:8px"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg><br>LRI chart unavailable.';
+    $("axisStart").textContent="—";$("axisEnd").textContent="—";
+  }
+
+  function showOverride(date){
+    $("override").style.display="flex";
+    $("overrideTx").innerHTML='Chart date override active: <b>'+date+'</b>. Cards show current LRI; chart uses selected date.';
+  }
+
+  function loadCurrent(){
+    return fetchJSON(EP_CURRENT).then(function(d){
+      if(!d||typeof d!=="object") throw new Error("bad payload");
+      return d;
+    }).catch(function(err){
+      if(IS_PROD) throw err;
+      return DEMO_CURRENT;
+    });
+  }
+  function loadChart(date){
+    return fetchJSON(EP_CHART+"?date="+encodeURIComponent(date)).then(function(d){
+      if(!d||d.ok===false) throw new Error("chart err");
+      return d;
+    }).catch(function(err){
+      if(IS_PROD) throw err;
+      return demoChart(date);
+    });
+  }
+
+  function init(){
+    state.overrideDate=getParam("date");
+
+    loadCurrent().then(function(c){
+      state.current=c;
+      applyAnchorLabels(c);
+      renderHeader(c);
+      renderCards(c);
+      renderStrip(c);
+      if(c._demo) $("foot").textContent="LOCKIQ RATE IMPACT · STANDALONE PROTOTYPE · SAMPLE DATA (endpoint unreachable in preview)";
+
+      // resolve chart date
+      var cd = state.overrideDate || c.trading_date || todayISO();
+      state.chartDate=cd;
+      if(state.overrideDate) showOverride(state.overrideDate);
+
+      return loadChart(cd);
+    }).then(function(ch){
+      if(!ch) return;
+      state.chart=ch;
+      state.points=(ch.points||[]).slice().sort(function(a,b){return String(a.timestamp).localeCompare(String(b.timestamp));});
+      renderChart();
+    }).catch(function(err){
+      // current failed (prod) -> error modules
+      renderCardsError();
+      renderStrip({});
+      setChartError();
+    });
+
+    // chart-only failure when current ok but chart endpoint dead (prod)
+    // handled within loadChart catch chaining above for prod via throw
+  }
+
+  /* ---------------- interactions ---------------- */
+  // government toggle
+  $("govToggle").addEventListener("click",function(){
+    state.showGov=!state.showGov;
+    this.classList.toggle("on",state.showGov);
+    this.setAttribute("aria-checked",state.showGov?"true":"false");
+    $("chartMeta").textContent = state.showGov ? "Conventional & Government · basis points vs anchor" : "Conventional · basis points vs anchor";
+    renderChart();
+  });
+  $("chartMeta").textContent="Conventional · basis points vs anchor";
+
+  // dropdown
+  var dd=$("dd");
+  $("ddBtn").addEventListener("click",function(e){e.stopPropagation();dd.classList.toggle("open");$("ddBtn").setAttribute("aria-expanded",dd.classList.contains("open"));});
+  document.addEventListener("click",function(){dd.classList.remove("open");$("ddBtn").setAttribute("aria-expanded","false");});
+
+  // resize -> re-render chart (debounced)
+  var rt;
+  window.addEventListener("resize",function(){clearTimeout(rt);rt=setTimeout(function(){if(state.points&&state.points.length)renderChart();},140);});
+
+  // go
+  init();
 })();
 </script>
 </body>
