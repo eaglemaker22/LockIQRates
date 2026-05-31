@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard — LockIQ Rates</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #080f1d;
+      --card:     #0f1f3d;
+      --card-alt: #132240;
+      --border:   #1a3366;
+      --navy:     #0f1f3d;
+      --blue:     #1a56db;
+      --gold:     #f5a623;
+      --cyan:     #22d3ee;
+      --text:     #e8edf5;
+      --muted:    #8aaad4;
+      --green:    #22c55e;
+      --red:      #ef4444;
+      --yellow:   #f59e0b;
+    }
+
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+    /* ── NAV ── */
+    nav { background: var(--navy); display: flex; align-items: center; justify-content: space-between; padding: 0 1.5rem; height: 56px; border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; }
+    .logo { color: #fff; font-size: 1.1rem; font-weight: 700; letter-spacing: -0.5px; }
+    .logo span { color: var(--gold); }
+    .nav-right { display: flex; align-items: center; gap: 1rem; }
+    .nav-meta { display: flex; align-items: center; gap: 1.25rem; }
+    #last-updated { font-size: 0.78rem; color: var(--muted); }
+    #refresh-indicator { width: 8px; height: 8px; border-radius: 50%; background: var(--green); display: inline-block; }
+    #refresh-indicator.stale { background: var(--yellow); }
+    #user-email { color: var(--muted); font-size: 0.8rem; }
+    #sign-out-btn { background: transparent; border: 1px solid rgba(255,255,255,0.2); color: var(--muted); padding: 0.35rem 0.85rem; border-radius: 5px; font-size: 0.78rem; cursor: pointer; }
+    #sign-out-btn:hover { border-color: rgba(255,255,255,0.4); color: #fff; }
+
+    /* ── LOADING ── */
+    #loading-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; gap: 1rem; color: var(--muted); }
+    .spinner { width: 40px; height: 40px; border: 3px solid #1a3366; border-top-color: var(--blue); border-radius: 50%; animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── APP SHELL ── */
+    #app-shell { display: none; }
+    .dashboard { max-width: 1400px; margin: 0 auto; padding: 1.25rem 1.5rem 3rem; display: flex; flex-direction: column; gap: 1.25rem; }
+
+    /* ── SECTION WRAPPER ── */
+    .dash-section { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem 1.5rem; }
+    .section-hd { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 1.1rem; }
+    .section-title { font-size: 0.7rem; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); }
+
+    /* ── SHARED CONTROLS ── */
+    .ctrl-group { display: flex; flex-direction: column; gap: 0.2rem; }
+    .ctrl-label { font-size: 0.68rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+    select { background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 0.4rem 0.65rem; border-radius: 6px; font-size: 0.85rem; font-family: inherit; }
+    select:focus { outline: none; border-color: var(--blue); }
+
+    /* ── BADGES ── */
+    .badge { font-size: 0.68rem; font-weight: 700; letter-spacing: 0.5px; padding: 0.22rem 0.55rem; border-radius: 4px; text-transform: uppercase; }
+    .badge-ok      { background: rgba(34,197,94,0.15);   color: var(--green);  border: 1px solid rgba(34,197,94,0.3); }
+    .badge-warn    { background: rgba(245,158,11,0.15);  color: var(--yellow); border: 1px solid rgba(245,158,11,0.3); }
+    .badge-limited { background: rgba(239,68,68,0.15);   color: var(--red);    border: 1px solid rgba(239,68,68,0.3); }
+    .badge-muted   { background: rgba(139,153,180,0.15); color: var(--muted);  border: 1px solid rgba(139,153,180,0.3); }
+
+    /* ── SIGNAL BADGES ── */
+    .signal-badge { display: inline-flex; align-items: center; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.5px; padding: 0.2rem 0.55rem; border-radius: 4px; width: fit-content; margin-top: 0.2rem; }
+    .signal-better { background: rgba(34,197,94,0.15); color: var(--green); border: 1px solid rgba(34,197,94,0.3); }
+    .signal-worse  { background: rgba(239,68,68,0.15);  color: var(--red);   border: 1px solid rgba(239,68,68,0.3); }
+    .signal-flat   { background: rgba(139,153,180,0.15); color: var(--muted); border: 1px solid rgba(139,153,180,0.3); }
+
+    /* ── COLOR HELPERS ── */
+    .pos { color: var(--green); }
+    .neg { color: var(--red); }
+    .neu { color: var(--muted); }
+
+    /* ── SECTION 1: LRI CARDS ── */
+    .lri-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+    .lri-card { background: var(--card-alt); border: 1px solid var(--border); border-radius: 10px; padding: 1.25rem 1.5rem; display: flex; flex-direction: column; gap: 0.35rem; }
+    .lri-product { font-size: 0.68rem; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); }
+    .lri-direction { font-size: 1.75rem; font-weight: 800; line-height: 1.15; }
+    .lri-direction.better { color: var(--green); }
+    .lri-direction.worse  { color: var(--red); }
+    .lri-direction.flat   { color: var(--muted); }
+    .lri-since { font-size: 0.7rem; color: var(--muted); margin-top: -0.1rem; }
+    .lri-bps { font-size: 0.95rem; font-weight: 700; margin-top: 0.2rem; }
+    .lri-bps.better { color: var(--green); }
+    .lri-bps.worse  { color: var(--red); }
+    .lri-bps.flat   { color: var(--muted); }
+    .lri-dollars { font-size: 0.82rem; color: var(--muted); }
+
+    /* ── REPRICE WATCH STRIP ── */
+    .reprice-strip { display: flex; align-items: center; gap: 1.5rem; padding: 0.6rem 1rem; background: var(--card-alt); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 0.9rem; flex-wrap: wrap; transition: border-color 0.2s, background 0.2s; }
+    .reprice-strip-label { font-size: 0.63rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); flex-shrink: 0; }
+    .reprice-item { display: flex; align-items: center; gap: 0.45rem; font-size: 0.82rem; }
+    .reprice-name { color: var(--muted); }
+    .reprice-val { font-weight: 700; }
+    .reprice-strip.alert { border-color: rgba(245,158,11,0.35); background: rgba(245,158,11,0.04); }
+    .reprice-as-of { margin-left: auto; font-size: 0.7rem; color: var(--muted); }
+
+    /* ── CHART DATE NOTICE ── */
+    .chart-date-notice { font-size: 0.75rem; color: var(--yellow); background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.2); border-radius: 6px; padding: 0.4rem 0.75rem; margin-bottom: 0.65rem; }
+
+    /* ── RANGE TABS (chart) ── */
+    .chart-sub-hd { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem; }
+    .chart-sub-label { font-size: 0.78rem; color: var(--muted); }
+    .range-tabs { display: flex; gap: 0.25rem; }
+    .range-tab { background: transparent; border: 1px solid var(--border); color: var(--muted); padding: 0.3rem 0.75rem; border-radius: 6px; font-size: 0.75rem; cursor: pointer; font-family: inherit; }
+    .range-tab.active { background: var(--blue); border-color: var(--blue); color: #fff; cursor: default; }
+    .range-tab:disabled { opacity: 0.35; cursor: not-allowed; }
+
+    /* ── SECTION 2: BENCHMARKS ── */
+    .bench-tabs { display: flex; gap: 0.25rem; }
+    .bench-tab { background: transparent; border: 1px solid var(--border); color: var(--muted); padding: 0.3rem 0.75rem; border-radius: 6px; font-size: 0.75rem; cursor: pointer; font-family: inherit; transition: background 0.15s; }
+    .bench-tab.active { background: var(--blue); border-color: var(--blue); color: #fff; }
+
+    .bench-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; }
+    .bench-card { background: var(--card-alt); border: 1px solid var(--border); border-radius: 10px; padding: 1rem 1.25rem; }
+    .bench-product { font-size: 0.63rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-bottom: 0.45rem; }
+    .bench-rate { font-size: 1.9rem; font-weight: 800; letter-spacing: -0.5px; }
+    .bench-source { font-size: 0.68rem; color: var(--muted); margin-top: 0.3rem; }
+
+    .bench-table { width: 100%; border-collapse: collapse; }
+    .bench-table th { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); text-align: left; padding: 0.3rem 0; border-bottom: 1px solid var(--border); }
+    .bench-table th:not(:first-child) { text-align: right; }
+    .bench-table td { font-size: 0.88rem; padding: 0.45rem 0; border-bottom: 1px solid rgba(26,51,102,0.5); }
+    .bench-table td:not(:first-child) { text-align: right; }
+    .bench-table .prod-cell { color: var(--muted); font-size: 0.8rem; }
+    .bench-as-of { font-size: 0.68rem; color: var(--muted); margin-top: 0.6rem; }
+
+    /* ── SECTION 3: MDI ── */
+    .mdi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; }
+    .mdi-item { background: var(--card-alt); border: 1px solid var(--border); border-radius: 8px; padding: 0.85rem 1rem; }
+    .mdi-label { font-size: 0.63rem; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; color: var(--muted); margin-bottom: 0.4rem; }
+    .mdi-value { font-size: 1.25rem; font-weight: 700; letter-spacing: -0.3px; }
+    .mdi-change { font-size: 0.78rem; font-weight: 600; margin-top: 0.15rem; }
+
+    /* ── SECTION 4: ECON CALENDAR ── */
+    .cal-tabs { display: flex; gap: 0.25rem; }
+    .cal-tab { background: transparent; border: 1px solid var(--border); color: var(--muted); padding: 0.35rem 0.85rem; border-radius: 6px; font-size: 0.78rem; cursor: pointer; font-family: inherit; }
+    .cal-tab.active { background: var(--blue); border-color: var(--blue); color: #fff; }
+    .cal-table { width: 100%; border-collapse: collapse; }
+    .cal-table th { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); text-align: left; padding: 0.3rem 0.5rem; border-bottom: 1px solid var(--border); }
+    .cal-table td { font-size: 0.82rem; padding: 0.5rem 0.5rem; border-bottom: 1px solid rgba(26,51,102,0.4); vertical-align: middle; }
+    .impact-high   { display: inline-block; background: rgba(239,68,68,0.15); color: var(--red);    border: 1px solid rgba(239,68,68,0.3);   font-size: 0.65rem; font-weight: 700; letter-spacing: 0.5px; padding: 0.15rem 0.45rem; border-radius: 4px; text-transform: uppercase; }
+    .impact-medium { display: inline-block; background: rgba(245,158,11,0.15); color: var(--yellow); border: 1px solid rgba(245,158,11,0.3); font-size: 0.65rem; font-weight: 700; letter-spacing: 0.5px; padding: 0.15rem 0.45rem; border-radius: 4px; text-transform: uppercase; }
+    .cal-empty { color: var(--muted); font-size: 0.85rem; padding: 1rem 0.5rem; }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 1100px) {
+      .bench-cards { grid-template-columns: 1fr 1fr; }
+      .mdi-grid    { grid-template-columns: repeat(4, 1fr); }
+    }
+    @media (max-width: 900px) {
+      .lri-cards   { grid-template-columns: 1fr; }
+      .bench-cards { grid-template-columns: 1fr 1fr; }
+      .mdi-grid    { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 600px) {
+      .bench-cards { grid-template-columns: 1fr; }
+      .mdi-grid    { grid-template-columns: 1fr 1fr; }
+      .nav-meta    { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── LOADING ── -->
+<div id="loading-screen">
+  <div class="spinner"></div>
+  <span>Loading dashboard&hellip;</span>
+</div>
+
+<!-- ── APP SHELL ── -->
+<div id="app-shell">
+
+  <nav>
+    <div class="logo">Lock<span>IQ</span> Rates</div>
+    <div class="nav-right">
+      <div class="nav-meta">
+        <span id="refresh-indicator"></span>
+        <span id="last-updated">—</span>
+      </div>
+      <span id="user-email"></span>
+      <button id="sign-out-btn">Sign out</button>
+    </div>
+  </nav>
+
+  <div class="dashboard">
+
+    <!-- ── SECTION 1: LOCKIQ RATE IMPACT ── -->
+    <div class="dash-section" id="section-lri">
+      <div class="section-hd">
+        <div style="display:flex;align-items:center;gap:.75rem;">
+          <span class="section-title">LockIQ Rate Impact</span>
+          <span id="lri-status-badge" class="badge badge-muted">—</span>
+        </div>
+        <div class="ctrl-group">
+          <span class="ctrl-label">Change Since</span>
+          <select id="change-since-select">
+            <option value="open" selected>Today's Open</option>
+            <option disabled>Yesterday's Close — soon</option>
+            <option disabled>24H — soon</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="lri-cards" id="lri-cards">
+        <div class="lri-card"><div class="lri-product">Loading&hellip;</div></div>
+        <div class="lri-card"><div class="lri-product">Loading&hellip;</div></div>
+      </div>
+
+      <div class="reprice-strip" id="reprice-strip"></div>
+
+      <div id="chart-date-notice" class="chart-date-notice" style="display:none;"></div>
+
+      <div class="chart-sub-hd">
+        <span class="chart-sub-label" id="chart-label">Rate Impact Since Today's Open</span>
+        <div class="range-tabs">
+          <button class="range-tab active">1D</button>
+          <button class="range-tab" disabled>5D &mdash; soon</button>
+          <button class="range-tab" disabled>1M &mdash; soon</button>
+        </div>
+      </div>
+      <div id="lri-chart-wrap"></div>
+    </div>
+
+    <!-- ── SECTION 2: RATE BENCHMARKS ── -->
+    <div class="dash-section" id="section-bench">
+      <div class="section-hd">
+        <span class="section-title">Rate Benchmarks</span>
+        <div class="bench-tabs">
+          <button class="bench-tab active" data-tab="standard">Standard</button>
+          <button class="bench-tab" data-tab="other">Other</button>
+        </div>
+      </div>
+      <div id="bench-content"></div>
+    </div>
+
+    <!-- ── SECTION 3: MARKET DIRECTION INDICATORS ── -->
+    <div class="dash-section" id="section-mdi">
+      <div class="section-hd">
+        <span class="section-title">Market Direction Indicators</span>
+      </div>
+      <div class="mdi-grid" id="mdi-grid"></div>
+    </div>
+
+    <!-- ── SECTION 4: ECONOMIC CALENDAR ── -->
+    <div class="dash-section" id="section-calendar">
+      <div class="section-hd" style="margin-bottom:.75rem;">
+        <span class="section-title">Economic Calendar</span>
+        <div class="cal-tabs">
+          <button class="cal-tab active" data-tab="today">Today</button>
+          <button class="cal-tab" data-tab="tomorrow">Tomorrow</button>
+          <button class="cal-tab" data-tab="week">This Week</button>
+          <button class="cal-tab" data-tab="next">Next Week</button>
+        </div>
+      </div>
+      <div id="cal-content"><p class="cal-empty">Loading&hellip;</p></div>
+    </div>
+
+  </div><!-- /.dashboard -->
+</div><!-- /#app-shell -->
+
+<script src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js"></script>
+
+<script>
+// ════════════════════════════════════════════════════════════════════════════
+// STATE
+// ════════════════════════════════════════════════════════════════════════════
+const state = {
+  lri:       null,   // getPublicLRI response
+  lriPoints: [],     // getPublicLRIChart points array
+  market:    null,   // getMarketData response
+  benchTab:  'standard',
+  calTab:    'today',
+};
+
+// ════════════════════════════════════════════════════════════════════════════
+// HELPERS
+// ════════════════════════════════════════════════════════════════════════════
+const $ = id => document.getElementById(id);
+const num = v => { const n = parseFloat(v); return isFinite(n) ? n : null; };
+
+function dirClass(n, invert) {
+  if (n == null) return 'neu';
+  if (invert) return n > 0 ? 'neg' : n < 0 ? 'pos' : 'neu';
+  return n > 0 ? 'pos' : n < 0 ? 'neg' : 'neu';
+}
+
+function fmtBps(v) {
+  if (v == null) return '—';
+  return (v >= 0 ? '+' : '') + v.toFixed(1) + ' bps';
+}
+
+function fmtDollars(v) {
+  if (v == null) return '—';
+  if (v === 0) return '$0 / $100k';
+  const sign = v > 0 ? '+' : '-';
+  return `${sign}$${Math.abs(v).toFixed(0)} / $100k`;
+}
+
+function fmtRate(n) {
+  return n == null ? '—' : n.toFixed(3) + '%';
+}
+
+function lriDirClass(d, bps) {
+  if (d === 'BETTER') return 'better';
+  if (d === 'WORSE')  return 'worse';
+  if (d === 'FLAT')   return 'flat';
+  if (bps == null)    return 'flat';
+  return bps > 0 ? 'better' : bps < 0 ? 'worse' : 'flat';
+}
+
+function lriDirLabel(d, bps) {
+  if (d === 'BETTER') return '&#8593; Better';
+  if (d === 'WORSE')  return '&#8595; Worse';
+  if (d === 'FLAT')   return 'Flat';
+  if (bps == null)    return '—';
+  if (bps > 0) return '&#8593; Better';
+  if (bps < 0) return '&#8595; Worse';
+  return 'Flat';
+}
+
+function signalCls(d) {
+  if (d === 'BETTER') return 'signal-better';
+  if (d === 'WORSE')  return 'signal-worse';
+  return 'signal-flat';
+}
+
+function badgeCls(type, v) {
+  if (type === 'status') {
+    if (v === 'OK')      return 'badge-ok';
+    if (v === 'LIMITED') return 'badge-limited';
+    return 'badge-muted';
+  }
+  if (type === 'conf') {
+    if (v === 'GOOD' || v === 'OK') return 'badge-ok';
+    if (v === 'OK_WITH_WARNINGS')   return 'badge-warn';
+    if (v === 'LIMITED')            return 'badge-limited';
+    return 'badge-muted';
+  }
+  return 'badge-muted';
+}
+
+function fmtAnchorTime(t) {
+  if (!t) return null;
+  const [h, m] = t.split(':').map(Number);
+  if (isNaN(h)) return t;
+  const ampm = h < 12 ? 'AM' : 'PM';
+  return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${ampm}`;
+}
+
+// FRED helpers
+function fredVal(cache, key) {
+  if (!cache) return null;
+  const v = cache[key] ?? cache[key.toLowerCase()] ?? cache[key.toUpperCase()];
+  if (v == null) return null;
+  if (typeof v === 'object' && v.latest != null) return num(v.latest);
+  return num(v);
+}
+
+function fredChange(cache, key) {
+  if (!cache) return null;
+  const v = cache[key] ?? cache[key.toLowerCase()] ?? cache[key.toUpperCase()];
+  if (v && typeof v === 'object' && v.change != null) return num(v.change);
+  return null;
+}
+
+function fredDate(cache, key) {
+  if (!cache) return null;
+  const v = cache[key] ?? cache[key.toLowerCase()] ?? cache[key.toUpperCase()];
+  if (v && typeof v === 'object') return v.latestDate ?? v.date ?? null;
+  return null;
+}
+
+// Calendar date utilities
+function etDateString(offsetDays = 0) {
+  const now = new Date();
+  const etOffset = -5 * 60;
+  const et = new Date(now.getTime() + (now.getTimezoneOffset() + etOffset) * 60000);
+  et.setDate(et.getDate() + offsetDays);
+  return et.toISOString().slice(0, 10);
+}
+
+function getWeekRange(weekOffset = 0) {
+  const now = new Date();
+  const etOffset = -5 * 60;
+  const et = new Date(now.getTime() + (now.getTimezoneOffset() + etOffset) * 60000);
+  const day = et.getDay();
+  const monday = new Date(et); monday.setDate(et.getDate() - (day === 0 ? 6 : day - 1) + weekOffset * 7);
+  const friday = new Date(monday); friday.setDate(monday.getDate() + 4);
+  return { start: monday.toISOString().slice(0, 10), end: friday.toISOString().slice(0, 10) };
+}
+
+// SVG chart time label
+function tickTime(ts) {
+  const t = (ts || '').split(' ')[1];
+  return t ? t.slice(0, 5) : '';
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// DATA FETCHING
+// ════════════════════════════════════════════════════════════════════════════
+async function fetchAll() {
+  $('refresh-indicator').className = 'stale';
+
+  const urlDate = new URLSearchParams(window.location.search).get('date');
+  const todayStr = new Date().toISOString().slice(0, 10);
+
+  // 1. Fetch current LRI snapshot first (chart date depends on it)
+  let lriData = null;
+  try {
+    const r = await fetch('/.netlify/functions/getPublicLRI');
+    if (r.ok) lriData = await r.json();
+  } catch {}
+  if (lriData) state.lri = lriData;
+
+  const chartDate = urlDate || lriData?.trading_date || todayStr;
+
+  // 2. Fetch chart ticks + market data in parallel
+  const [chartR, marketR] = await Promise.allSettled([
+    fetch(`/.netlify/functions/getPublicLRIChart?date=${encodeURIComponent(chartDate)}`)
+      .then(r => r.ok ? r.json() : null).catch(() => null),
+    fetch('/.netlify/functions/getMarketData')
+      .then(r => r.ok ? r.json() : null).catch(() => null),
+  ]);
+
+  if (chartR.status === 'fulfilled' && chartR.value?.ok) {
+    state.lriPoints = chartR.value.points || [];
+  }
+  if (marketR.status === 'fulfilled' && marketR.value) {
+    state.market = marketR.value;
+  }
+
+  // Date override notice
+  const notice = $('chart-date-notice');
+  if (urlDate) {
+    notice.textContent = `Test date override active: ${urlDate} — Cards show current LRI. Chart shows data for ${urlDate}.`;
+    notice.style.display = '';
+  } else {
+    notice.style.display = 'none';
+  }
+
+  const now = new Date();
+  $('last-updated').textContent = 'Updated ' + now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  $('refresh-indicator').className = '';
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// SECTION 1 — LRI CARDS + REPRICE STRIP + CHART
+// ════════════════════════════════════════════════════════════════════════════
+function renderLRICards() {
+  const d = state.lri;
+
+  // Status badge
+  const sb = $('lri-status-badge');
+  if (d?.status) {
+    sb.textContent = d.status;
+    sb.className = `badge ${badgeCls('status', d.status)}`;
+  }
+
+  // Cards
+  const defs = [
+    { label: 'Conventional', bps: d?.conv_lri_bps, dollars: d?.conv_dollars_per_100k, dir: d?.conv_direction },
+    { label: 'Government',   bps: d?.gov_lri_bps,  dollars: d?.gov_dollars_per_100k,  dir: d?.gov_direction  },
+  ];
+
+  $('lri-cards').innerHTML = defs.map(c => {
+    const cls     = lriDirClass(c.dir, c.bps);
+    const dirHtml = lriDirLabel(c.dir, c.bps);
+    return `<div class="lri-card">
+      <div class="lri-product">${c.label}</div>
+      <div class="lri-direction ${cls}">${dirHtml}</div>
+      <div class="lri-since">vs Today's Open</div>
+      <div class="lri-bps ${cls}">${fmtBps(c.bps)}</div>
+      <div class="lri-dollars">${fmtDollars(c.dollars)}</div>
+      <span class="signal-badge ${signalCls(c.dir)}">${c.dir || '—'}</span>
+    </div>`;
+  }).join('');
+}
+
+function renderRepriceStrip() {
+  const d = state.lri;
+  const strip = $('reprice-strip');
+
+  if (!d) { strip.innerHTML = ''; return; }
+
+  const convBps = d.conv_lri_bps;
+  const govBps  = d.gov_lri_bps;
+  const alert   = (Math.abs(convBps ?? 0) > 25 || Math.abs(govBps ?? 0) > 25);
+
+  const fmtVal = v => {
+    if (v == null) return '<span class="reprice-val neu">—</span>';
+    const cls = v > 0 ? 'pos' : v < 0 ? 'neg' : 'neu';
+    return `<span class="reprice-val ${cls}">${fmtBps(v)}</span>`;
+  };
+
+  const asOf = d.last_updated ? d.last_updated.slice(11, 16) : '';
+
+  strip.innerHTML = `
+    <span class="reprice-strip-label">Reprice Watch</span>
+    <div class="reprice-item"><span class="reprice-name">Conventional</span>${fmtVal(convBps)}</div>
+    <div class="reprice-item"><span class="reprice-name">Government</span>${fmtVal(govBps)}</div>
+    ${asOf ? `<span class="reprice-as-of">as of ${asOf}</span>` : ''}`;
+
+  strip.classList.toggle('alert', alert);
+}
+
+function renderLRIChart() {
+  const points = state.lriPoints;
+  const wrap   = $('lri-chart-wrap');
+  const d      = state.lri;
+
+  // Chart sub-label
+  const at = fmtAnchorTime(d?.anchor_time);
+  $('chart-label').textContent = at ? `Rate Impact Since ${at}` : "Rate Impact Since Today's Open";
+
+  if (!points || points.length === 0) {
+    wrap.innerHTML = '<div style="color:var(--muted);font-size:.88rem;padding:3rem 0;text-align:center;">No chart data available for this period.</div>';
+    return;
+  }
+
+  const W = 800, H = 220;
+  const PL = 52, PR = 20, PT = 24, PB = 32;
+  const pw = W - PL - PR, ph = H - PT - PB;
+  const n = points.length;
+
+  const allVals = [
+    ...points.map(p => p.conv_lri_bps),
+    ...points.map(p => p.gov_lri_bps),
+    0,
+  ].filter(v => v != null);
+
+  let yMin = Math.min(...allVals), yMax = Math.max(...allVals);
+  const pad = (yMax - yMin || 2) * 0.18;
+  yMin -= pad; yMax += pad;
+
+  const range = yMax - yMin || 1;
+  const toX = i => PL + (n > 1 ? (i / (n - 1)) * pw : pw / 2);
+  const toY = v => PT + ph - ((v - yMin) / range) * ph;
+
+  const polyline = key => points
+    .filter(p => p[key] != null)
+    .map((_, i, arr) => {
+      const orig = points.indexOf(arr[i]);
+      return `${toX(orig).toFixed(1)},${toY(points[orig][key]).toFixed(1)}`;
+    })
+    .join(' ');
+
+  // Build polylines properly: only connected segments where data exists
+  const polylineStr = key => {
+    const parts = [];
+    points.forEach((p, i) => {
+      if (p[key] != null) parts.push(`${toX(i).toFixed(1)},${toY(p[key]).toFixed(1)}`);
+    });
+    return parts.join(' ');
+  };
+
+  const zY   = toY(0).toFixed(1);
+  const midI = Math.floor(n / 2);
+
+  const zYn = parseFloat(zY);
+  const greenH  = Math.max(0, Math.min(zYn - PT, ph));
+  const redTop  = Math.max(PT, zYn);
+  const redH    = Math.max(0, PT + ph - redTop);
+
+  const gridLines = [yMax, 0, yMin].map(v =>
+    `<line x1="${PL}" y1="${toY(v).toFixed(1)}" x2="${W - PR}" y2="${toY(v).toFixed(1)}" stroke="#1a3366" stroke-width="1"/>`
+  ).join('');
+
+  const yLabels = [yMax, 0, yMin].map(v =>
+    `<text x="${PL - 6}" y="${toY(v).toFixed(1)}" text-anchor="end" dominant-baseline="middle" fill="#8aaad4" font-size="11" font-family="system-ui,sans-serif">${(v >= 0 ? '+' : '') + v.toFixed(1)}</text>`
+  ).join('');
+
+  const xLabels = [
+    `<text x="${PL}" y="${H - 6}" text-anchor="start" fill="#8aaad4" font-size="11" font-family="system-ui,sans-serif">${tickTime(points[0].timestamp)}</text>`,
+    n > 2 ? `<text x="${toX(midI).toFixed(1)}" y="${H - 6}" text-anchor="middle" fill="#8aaad4" font-size="11" font-family="system-ui,sans-serif">${tickTime(points[midI].timestamp)}</text>` : '',
+    `<text x="${W - PR}" y="${H - 6}" text-anchor="end" fill="#8aaad4" font-size="11" font-family="system-ui,sans-serif">${tickTime(points[n - 1].timestamp)}</text>`,
+  ].join('');
+
+  wrap.innerHTML = `
+<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:260px;display:block;">
+  <defs>
+    <clipPath id="chartClip"><rect x="${PL}" y="${PT}" width="${pw}" height="${ph}"/></clipPath>
+  </defs>
+  <rect x="${PL}" y="${PT}" width="${pw}" height="${greenH}" fill="rgba(34,197,94,0.05)"/>
+  <rect x="${PL}" y="${redTop}" width="${pw}" height="${redH}" fill="rgba(239,68,68,0.05)"/>
+  ${gridLines}
+  <line x1="${PL}" y1="${zY}" x2="${W - PR}" y2="${zY}" stroke="#2a4480" stroke-width="1.5" stroke-dasharray="5,4"/>
+  <polyline clip-path="url(#chartClip)" points="${polylineStr('conv_lri_bps')}" fill="none" stroke="#22d3ee" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+  <polyline clip-path="url(#chartClip)" points="${polylineStr('gov_lri_bps')}"  fill="none" stroke="#f5a623" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+  ${yLabels}
+  ${xLabels}
+  <circle cx="${W - 88}" cy="13" r="4" fill="#22d3ee"/>
+  <text x="${W - 81}" y="17" fill="#e8edf5" font-size="11" font-family="system-ui,sans-serif">Conv</text>
+  <circle cx="${W - 42}" cy="13" r="4" fill="#f5a623"/>
+  <text x="${W - 35}" y="17" fill="#e8edf5" font-size="11" font-family="system-ui,sans-serif">Gov</text>
+</svg>`;
+}
+
+function renderLRI() {
+  renderLRICards();
+  renderRepriceStrip();
+  renderLRIChart();
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// SECTION 2 — RATE BENCHMARKS
+// ════════════════════════════════════════════════════════════════════════════
+function renderBenchmarks() {
+  const br   = state.market?.broker_rates;
+  const fred = state.market?.fred_cache;
+  const el   = $('bench-content');
+
+  if (state.benchTab === 'standard') {
+    const cards = [
+      { label: '30Y Conventional', val: num(br?.conv30)  },
+      { label: '30Y FHA',          val: num(br?.fha30)   },
+      { label: '30Y VA',           val: num(br?.va30)    },
+      { label: '30Y Jumbo',        val: num(br?.jumbo30) },
+    ];
+    const asOf = br?.as_of ? ` &middot; ${br.as_of}` : '';
+    el.innerHTML = `<div class="bench-cards">${
+      cards.map(c => `<div class="bench-card">
+        <div class="bench-product">${c.label}</div>
+        <div class="bench-rate">${c.val != null ? c.val.toFixed(3) + '%' : '—'}</div>
+        <div class="bench-source">Pipeline${asOf}</div>
+      </div>`).join('')
+    }</div>`;
+
+  } else {
+    // Other tab: PMMS + Optimal Blue + Fed/Prime
+    const obDate  = fredDate(fred, 'OBMMIC30YF');
+    const obLabel = obDate ? `Optimal Blue &middot; ${obDate}` : 'Optimal Blue';
+
+    const rows = [
+      { label: 'PMMS 30Y Fixed', val: fredVal(fred, 'MORTGAGE30US'),  chg: null, src: 'Freddie Mac PMMS' },
+      { label: 'PMMS 15Y Fixed', val: fredVal(fred, 'MORTGAGE15US'),  chg: null, src: 'Freddie Mac PMMS' },
+      { label: 'OB 30Y Conv',    val: fredVal(fred, 'OBMMIC30YF'),    chg: fredChange(fred, 'OBMMIC30YF'),   src: obLabel },
+      { label: 'OB 30Y FHA',     val: fredVal(fred, 'OBMMIFHA30YF'), chg: fredChange(fred, 'OBMMIFHA30YF'), src: obLabel },
+      { label: 'OB 30Y VA',      val: fredVal(fred, 'OBMMIVA30YF'),  chg: fredChange(fred, 'OBMMIVA30YF'),  src: obLabel },
+      { label: 'Fed Funds Rate',  val: fredVal(fred, 'FEDFUNDS') ?? fredVal(fred, 'DFEDTARU'), chg: null, src: 'FRED' },
+      { label: 'Prime Rate',      val: fredVal(fred, 'DPRIME'),       chg: null, src: 'FRED' },
+    ];
+
+    el.innerHTML = `<table class="bench-table">
+      <thead><tr>
+        <th>Product</th>
+        <th>Rate</th>
+        <th>Wk Chg</th>
+        <th>Source</th>
+      </tr></thead>
+      <tbody>${rows.map(r => {
+        const valStr = r.val != null ? r.val.toFixed(r.val >= 10 ? 2 : 3) + '%' : '—';
+        const chgStr = r.chg != null
+          ? `<span class="${dirClass(r.chg, true)}">${r.chg > 0 ? '+' : ''}${r.chg.toFixed(2)}</span>`
+          : '<span style="color:var(--muted)">—</span>';
+        return `<tr>
+          <td class="prod-cell">${r.label}</td>
+          <td>${valStr}</td>
+          <td>${chgStr}</td>
+          <td style="color:var(--muted);font-size:.75rem">${r.src}</td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table>`;
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// SECTION 3 — MARKET DIRECTION INDICATORS
+// ════════════════════════════════════════════════════════════════════════════
+function renderMDI() {
+  const sb   = state.market?.shadow_bonds;
+  const fred = state.market?.fred_cache;
+
+  const us10y    = num(sb?.US10Y_Current);
+  const us30y    = num(sb?.US30Y_Current);
+  const us10yChg = num(sb?.US10Y_Daily_Change);
+  const us30yChg = num(sb?.US30Y_Daily_Change);
+  const zn       = num(sb?.ZN1_Current);
+  const znChg    = num(sb?.ZN1_Daily_Change);
+  const mbb      = num(sb?.MBB_Shadow ?? sb?.MBB_Current);
+  const mbbChg   = num(sb?.MBB_Shadow_Daily_Change ?? sb?.MBB_Daily_Change);
+
+  const spread1030    = (us10y != null && us30y != null) ? (us30y - us10y) * 100 : null;
+  const obmmic        = fredVal(fred, 'OBMMIC30YF');
+  const mbsTreasury   = (obmmic != null && us10y != null) ? obmmic - us10y : null;
+
+  const chgBps = (v, invert = false) => {
+    if (v == null) return '<span style="color:var(--muted)">—</span>';
+    const bps = (v * 100).toFixed(1);
+    const cls = dirClass(v, invert);
+    return `<span class="${cls}">${v > 0 ? '+' : ''}${bps} bps</span>`;
+  };
+
+  const chgPts = (v, dec = 3) => {
+    if (v == null) return '<span style="color:var(--muted)">—</span>';
+    const cls = dirClass(v, false);
+    return `<span class="${cls}">${v > 0 ? '+' : ''}${v.toFixed(dec)}</span>`;
+  };
+
+  const items = [
+    { label: 'US 10Y Yield',       value: us10y != null ? us10y.toFixed(3) + '%' : '—', change: chgBps(us10yChg, true),  suffix: 'today' },
+    { label: 'US 30Y Yield',       value: us30y != null ? us30y.toFixed(3) + '%' : '—', change: chgBps(us30yChg, true),  suffix: 'today' },
+    { label: 'ZN Futures',         value: zn    != null ? zn.toFixed(3)            : '—', change: chgPts(znChg),          suffix: 'today' },
+    { label: 'MBB ETF',            value: mbb   != null ? mbb.toFixed(2)           : '—', change: chgPts(mbbChg, 2),      suffix: 'today' },
+    { label: '10s/30s Spread',     value: spread1030  != null ? spread1030.toFixed(1)  + ' bps' : '—', change: null, suffix: '' },
+    { label: 'MBS–Treasury',       value: mbsTreasury != null ? mbsTreasury.toFixed(2) + '%'    : '—', change: null, suffix: '' },
+    { label: '2s/10s Spread',      value: '—', change: null, suffix: '' },
+    { label: 'Primary–Secondary',  value: '—', change: null, suffix: '' },
+  ];
+
+  $('mdi-grid').innerHTML = items.map(item => `
+    <div class="mdi-item">
+      <div class="mdi-label">${item.label}</div>
+      <div class="mdi-value">${item.value}</div>
+      <div class="mdi-change">${item.change != null ? item.change + (item.suffix ? ' ' + item.suffix : '') : '<span style="color:var(--muted)">—</span>'}</div>
+    </div>`).join('');
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// SECTION 4 — ECONOMIC CALENDAR
+// ════════════════════════════════════════════════════════════════════════════
+function renderCalendar() {
+  const el = $('cal-content');
+  if (!state.market) { el.innerHTML = '<p class="cal-empty">No calendar data</p>'; return; }
+
+  const pad = n => String(n).padStart(2, '0');
+  const tmr = new Date(); tmr.setDate(tmr.getDate() + 1);
+  const tomorrowStr = `${tmr.getFullYear()}-${pad(tmr.getMonth()+1)}-${pad(tmr.getDate())}`;
+  const thisWeek = getWeekRange(0);
+  const nextWeek = getWeekRange(1);
+
+  let rawEvents;
+  if (state.calTab === 'today') {
+    rawEvents = state.market.econ_calendar_today?.events || [];
+  } else if (state.calTab === 'tomorrow') {
+    rawEvents = (state.market.econ_calendar_upcoming?.events || []).filter(e => e.date === tomorrowStr);
+  } else if (state.calTab === 'week') {
+    rawEvents = (state.market.econ_calendar_upcoming?.events || []).filter(e => e.date >= thisWeek.start && e.date <= thisWeek.end);
+  } else {
+    rawEvents = (state.market.econ_calendar_upcoming?.events || []).filter(e => e.date >= nextWeek.start && e.date <= nextWeek.end);
+  }
+
+  const events = rawEvents.filter(e => e.impact_label !== 'Low' || e.star_event === true);
+
+  if (events.length === 0) {
+    el.innerHTML = '<p class="cal-empty">No events for this period</p>';
+    return;
+  }
+
+  const showDate = state.calTab !== 'today';
+  const dateHdr  = showDate ? '<th>Date</th>' : '';
+
+  const rows = events.map(e => {
+    const badge    = e.impact_label === 'High'
+      ? '<span class="impact-high">HIGH</span>'
+      : '<span class="impact-medium">MED</span>';
+    const forecast = (e.forecast != null && e.forecast !== '') ? e.forecast : '—';
+    const actual   = (e.actual   != null && e.actual   !== '') ? e.actual   : null;
+    const dateCell = showDate ? `<td style="color:var(--muted)">${e.date || ''}</td>` : '';
+    return `<tr>
+      ${dateCell}
+      <td style="color:var(--muted);white-space:nowrap">${e.time || '—'}</td>
+      <td>${e.event || ''}</td>
+      <td>${badge}</td>
+      <td style="text-align:right;color:var(--muted)">${forecast}</td>
+      <td style="text-align:right">${actual != null ? actual : '<span style="color:var(--muted)">—</span>'}</td>
+    </tr>`;
+  }).join('');
+
+  el.innerHTML = `<table class="cal-table">
+    <thead><tr>${dateHdr}<th>Time (ET)</th><th>Event</th><th>Impact</th><th style="text-align:right">Forecast</th><th style="text-align:right">Actual</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// RENDER ALL
+// ════════════════════════════════════════════════════════════════════════════
+function renderAll() {
+  renderLRI();
+  renderBenchmarks();
+  renderMDI();
+  renderCalendar();
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// INIT
+// ════════════════════════════════════════════════════════════════════════════
+async function initDashboard() {
+  // Benchmark tab switcher
+  document.querySelectorAll('.bench-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.bench-tab').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      state.benchTab = btn.dataset.tab;
+      renderBenchmarks();
+    });
+  });
+
+  // Calendar tab switcher
+  document.querySelectorAll('.cal-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.cal-tab').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      state.calTab = btn.dataset.tab;
+      renderCalendar();
+    });
+  });
+
+  // Initial load
+  await fetchAll();
+  renderAll();
+
+  // Auto-refresh every 60 seconds
+  setInterval(async () => {
+    await fetchAll();
+    renderAll();
+  }, 60000);
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// CLERK AUTH GATE
+// ════════════════════════════════════════════════════════════════════════════
+(async () => {
+  const loading  = $('loading-screen');
+  const appShell = $('app-shell');
+  const params   = new URLSearchParams(window.location.search);
+
+  function showApp(email) {
+    loading.style.display  = 'none';
+    appShell.style.display = 'block';
+    $('user-email').textContent = email || '';
+    initDashboard();
+  }
+
+  async function goToCheckout(token) {
+    const res = await fetch('/.netlify/functions/createCheckoutSession', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
+    if (!res.ok) throw new Error('createCheckoutSession failed');
+    const { url } = await res.json();
+    window.location.href = url;
+  }
+
+  // Try Clerk
+  let clerk = null;
+  try {
+    const res = await fetch('/.netlify/functions/getConfig');
+    if (res.ok) {
+      const { clerkPublishableKey } = await res.json();
+      if (window.Clerk && clerkPublishableKey) {
+        await window.Clerk.load({ publishableKey: clerkPublishableKey });
+        clerk = window.Clerk;
+      }
+    }
+  } catch { /* Clerk unavailable */ }
+
+  // No Clerk → dev mode, show ungated
+  if (!clerk) {
+    showApp('');
+    $('sign-out-btn').style.display = 'none';
+    return;
+  }
+
+  // Must be signed in
+  if (!clerk.user) { window.location.href = '/'; return; }
+
+  const email = clerk.user.primaryEmailAddress?.emailAddress || '';
+  const token = await clerk.session.getToken();
+
+  $('sign-out-btn').addEventListener('click', async () => {
+    await clerk.signOut();
+    window.location.href = '/';
+  });
+
+  // New signup → Stripe
+  if (params.get('checkout') === '1') {
+    history.replaceState(null, '', '/proto.html');
+    try { await goToCheckout(token); } catch { showApp(email); }
+    return;
+  }
+
+  // Returning from Stripe → show optimistically
+  if (params.get('checkout') === 'complete') {
+    history.replaceState(null, '', '/proto.html');
+    showApp(email);
+    return;
+  }
+
+  // Normal visit → check subscription
+  try {
+    const res = await fetch('/.netlify/functions/checkSubscription', {
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
+    if (!res.ok) throw new Error();
+    const { status } = await res.json();
+    if (status === 'active') {
+      showApp(email);
+    } else {
+      await goToCheckout(token);
+    }
+  } catch {
+    showApp(email);
+  }
+})();
+</script>
+</body>
+</html>
