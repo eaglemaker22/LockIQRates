@@ -288,15 +288,22 @@ body{
 .all-table .t-val{color:var(--ink);font-weight:600}
 .all-table .t-src{font-size:10.5px;color:var(--ink-4)}
 
-/* ---------- market direction indicators ---------- */
-.mdi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
-.mdi-tile{padding:20px 20px 18px;position:relative;overflow:hidden}
-.mdi-tile .mt-label{font-family:var(--font-mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-4);margin-bottom:12px}
-.mdi-tile .mt-val{font-family:var(--font-mono);font-weight:700;font-size:26px;letter-spacing:-.01em;line-height:1;color:var(--ink)}
-.mdi-tile .mt-chg{font-family:var(--font-mono);font-size:12px;margin-top:9px;display:flex;align-items:center;gap:5px}
-.mdi-tile .mt-badge{font-family:var(--font-mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;padding:3px 9px;border-radius:999px;margin-top:10px;display:inline-flex;font-weight:600}
-.mdi-tile .mt-soon{font-family:var(--font-mono);font-size:10px;color:var(--ink-4);margin-top:12px;letter-spacing:.04em}
-.mdi-tile.is-dim .mt-val{color:var(--ink-4)}
+/* ---------- market direction indicators (compact table) ---------- */
+.mdi-hd{padding:13px 20px 11px;border-bottom:1px solid var(--line);display:flex;align-items:baseline;gap:18px;flex-wrap:wrap}
+.mdi-hd .mdi-title{font-size:14px;font-weight:600;flex:none}
+.mdi-hd .mdi-sub{font-family:var(--font-mono);font-size:10px;color:var(--ink-4);letter-spacing:.05em}
+.mdi-table{width:100%;border-collapse:collapse}
+.mdi-table th{font-family:var(--font-mono);font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-4);padding:8px 18px 7px;border-bottom:1px solid var(--line-strong);white-space:nowrap}
+.mdi-table th:not(:first-child){text-align:right}
+.mdi-table td{font-family:var(--font-mono);font-size:12.5px;padding:7px 18px;border-bottom:1px solid var(--line);vertical-align:middle}
+.mdi-table tr:last-child td{border-bottom:0}
+.mdi-name{color:var(--ink-2);font-size:12.5px}
+.mdi-val{text-align:right;color:var(--ink);font-weight:600}
+.mdi-chg{text-align:right}
+.mdi-bias{text-align:right}
+.mdi-pos{color:var(--better)}
+.mdi-neg{color:var(--worse)}
+.mdi-neu{color:var(--ink-4)}
 
 /* ---------- economic calendar ---------- */
 .cal-table{width:100%;border-collapse:collapse}
@@ -316,7 +323,6 @@ body{
 /* ---------- responsive ---------- */
 @media(max-width:1100px){
   .bench-grid{grid-template-columns:repeat(2,1fr)}
-  .mdi-grid{grid-template-columns:repeat(2,1fr)}
 }
 @media(max-width:1000px){
   .grid-cards{grid-template-columns:1fr 1fr}
@@ -335,8 +341,8 @@ body{
   .changesince{width:100%;justify-content:space-between}
   .chart-ctrls{width:100%;justify-content:space-between}
   .bench-grid{grid-template-columns:1fr}
-  .mdi-grid{grid-template-columns:1fr 1fr}
   .tab-bar button{padding:6px 10px;font-size:11px}
+  .mdi-table td,.mdi-table th{padding:7px 12px}
   .section-row{align-items:flex-start;flex-direction:column;gap:12px}
 }
 </style>
@@ -436,6 +442,23 @@ body{
     <div class="cell"><div class="k">Last Updated</div><div class="v mono" id="sUpdated">—</div></div>
   </section>
 
+  <!-- ===== MARKET DIRECTION INDICATORS (compact) ===== -->
+  <section class="panel" id="mdiPanel" style="margin-top:16px;overflow:hidden">
+    <div class="mdi-hd">
+      <span class="mdi-title">Market Direction Indicators</span>
+      <span class="mdi-sub">Key mortgage market drivers behind rate-pricing direction.</span>
+    </div>
+    <table class="mdi-table">
+      <thead><tr>
+        <th>Indicator</th>
+        <th style="text-align:right">Current</th>
+        <th style="text-align:right">Today's Change</th>
+        <th style="text-align:right">Bias</th>
+      </tr></thead>
+      <tbody id="mdiBody"><!-- injected --></tbody>
+    </table>
+  </section>
+
   <!-- ===== SECTION 2: RATE BENCHMARKS ===== -->
   <div class="section-sep"></div>
   <div class="section-row">
@@ -451,16 +474,7 @@ body{
   </div>
   <div id="benchContent"><!-- injected --></div>
 
-  <!-- ===== SECTION 3: MARKET DIRECTION INDICATORS ===== -->
-  <div class="section-sep"></div>
-  <div class="section-hd">
-    <div class="eyebrow">Live Signals</div>
-    <h2>Market Direction Indicators</h2>
-    <p>Intraday bond market proxies that influence mortgage pricing direction.</p>
-  </div>
-  <div class="mdi-grid" id="mdiGrid"><!-- injected --></div>
-
-  <!-- ===== SECTION 4: ECONOMIC CALENDAR ===== -->
+  <!-- ===== ECONOMIC CALENDAR ===== -->
   <div class="section-sep"></div>
   <div class="section-row">
     <div class="section-hd" style="margin-bottom:0">
@@ -996,37 +1010,39 @@ body{
       html+='</div>';
       el.innerHTML=html;
     } else {
+      // Unified 11-item list (required order)
+      var allRates=[
+        {name:"Conforming 30 Yr",   type:"broker", key:"conv30",       src:"LockIQ Live"},
+        {name:"FHA 30 Yr",          type:"broker", key:"fha30",        src:"LockIQ Live"},
+        {name:"VA 30 Yr",           type:"broker", key:"va30",         src:"LockIQ Live"},
+        {name:"Jumbo 30 Yr",        type:"broker", key:"jumbo30",      src:"LockIQ Live"},
+        {name:"Investment 30 Yr",   type:"static", key:null,           src:"—"},
+        {name:"OB Conventional 30", type:"fred",   key:"OBMMIC30YF",   src:"Optimal Blue"},
+        {name:"OB FHA 30",          type:"fred",   key:"OBMMIFHA30YF", src:"Optimal Blue"},
+        {name:"OB VA 30",           type:"fred",   key:"OBMMIVA30YF",  src:"Optimal Blue"},
+        {name:"OB Jumbo 30",        type:"static", key:null,           src:"—"},
+        {name:"Freddie 30 Yr",      type:"fred",   key:"MORTGAGE30US", src:"Freddie Mac PMMS"},
+        {name:"Freddie 15 Yr",      type:"fred",   key:"MORTGAGE15US", src:"Freddie Mac PMMS"}
+      ];
       var rows="";
-      var brList=[
-        {name:"Conv 30Y (Broker)",val:br&&br.conv30,  src:"LockIQ Live"},
-        {name:"FHA 30Y (Broker)", val:br&&br.fha30,   src:"LockIQ Live"},
-        {name:"VA 30Y (Broker)",  val:br&&br.va30,    src:"LockIQ Live"},
-        {name:"Jumbo 30Y (Broker)",val:br&&br.jumbo30,src:"LockIQ Live"}
-      ];
-      var fredList=[
-        {name:"Freddie 30Y Fixed",key:"MORTGAGE30US", src:"Freddie Mac PMMS"},
-        {name:"Freddie 15Y Fixed",key:"MORTGAGE15US", src:"Freddie Mac PMMS"},
-        {name:"Opt Blue 30Y Conv",key:"OBMMIC30YF",   src:"Optimal Blue / FRED"},
-        {name:"Opt Blue 30Y FHA", key:"OBMMIFHA30YF", src:"Optimal Blue / FRED"},
-        {name:"Opt Blue 30Y VA",  key:"OBMMIVA30YF",  src:"Optimal Blue / FRED"},
-        {name:"Fed Funds Rate",   key:"FEDFUNDS",     src:"FRED / Fed"},
-        {name:"Prime Rate",       key:"DPRIME",       src:"FRED / WSJ"}
-      ];
-      brList.forEach(function(r){
-        var v=r.val;
-        var rate=(v!=null&&!isNaN(v))?Number(v).toFixed(3)+"%":"—";
-        rows+='<tr><td class="t-name">'+r.name+'</td><td class="t-val">'+rate+'</td><td style="font-family:var(--font-mono);font-size:12px;color:var(--ink-4)">—</td><td class="t-src">'+r.src+'</td></tr>';
-      });
-      fredList.forEach(function(r){
-        var v=fredVal(fc,r.key);
-        var chg=fredChange(fc,r.key);
-        var rate=v!=null?v.toFixed(2)+"%":"—";
-        var chgStr="—"; var chgColor="var(--ink-4)";
-        if(chg!=null){
-          chgStr=(chg>0?"+":"")+chg.toFixed(2)+"%";
-          chgColor=chg>0.001?"var(--worse)":chg<-0.001?"var(--better)":"var(--ink-4)";
+      allRates.forEach(function(r){
+        var rateStr="N/A",chgStr="—",chgColor="var(--ink-4)";
+        if(r.type==="broker"&&br){
+          var bv=br[r.key];
+          rateStr=(bv!=null&&!isNaN(bv))?Number(bv).toFixed(3)+"%":"—";
+        } else if(r.type==="fred"){
+          var fv=fredVal(fc,r.key),fchg=fredChange(fc,r.key);
+          rateStr=fv!=null?fv.toFixed(2)+"%":"—";
+          if(fchg!=null){
+            chgStr=(fchg>0?"+":"")+fchg.toFixed(2)+"%";
+            chgColor=fchg>0.001?"var(--worse)":fchg<-0.001?"var(--better)":"var(--ink-4)";
+          }
         }
-        rows+='<tr><td class="t-name">'+r.name+'</td><td class="t-val">'+rate+'</td><td style="font-family:var(--font-mono);font-size:12px;color:'+chgColor+'">'+chgStr+'</td><td class="t-src">'+r.src+'</td></tr>';
+        rows+='<tr>'+
+          '<td class="t-name">'+r.name+'</td>'+
+          '<td class="t-val">'+rateStr+'</td>'+
+          '<td style="font-family:var(--font-mono);font-size:12px;color:'+chgColor+'">'+chgStr+'</td>'+
+          '<td class="t-src">'+r.src+'</td></tr>';
       });
       el.innerHTML='<div class="panel" style="overflow:hidden">'+
         '<table class="all-table"><thead><tr>'+
@@ -1036,68 +1052,60 @@ body{
   }
 
   /* ===================================================================
-     RENDER: market direction indicators (Section 3)
+     RENDER: market direction indicators (compact table)
   =================================================================== */
   function renderMDI(){
     var sb=state.market&&state.market.shadow_bonds;
 
-    var spread10_30=null;
-    if(sb&&sb.US30Y_Current!=null&&sb.US10Y_Current!=null){
-      spread10_30=Math.round((sb.US30Y_Current-sb.US10Y_Current)*1000)/10;
-    }
+    var us10y   = sb&&sb.US10Y_Current!=null    ? Number(sb.US10Y_Current)        : null;
+    var us10yChg= sb&&sb.US10Y_Daily_Change!=null? Number(sb.US10Y_Daily_Change)  : null;
+    var us30y   = sb&&sb.US30Y_Current!=null    ? Number(sb.US30Y_Current)        : null;
+    var us30yChg= sb&&sb.US30Y_Daily_Change!=null? Number(sb.US30Y_Daily_Change)  : null;
+    var zn      = sb&&sb.ZN1_Current!=null      ? Number(sb.ZN1_Current)          : null;
+    var znChg   = sb&&sb.ZN1_Daily_Change!=null  ? Number(sb.ZN1_Daily_Change)    : null;
+    var mbb     = sb&&sb.MBB_Current!=null      ? Number(sb.MBB_Current)          : null;
+    var mbbChg  = sb&&sb.MBB_Daily_Change!=null  ? Number(sb.MBB_Daily_Change)    : null;
+    var sp1030  = us10y!=null&&us30y!=null ? Math.round((us30y-us10y)*1000)/10   : null;
+    var sp1030Chg= us10yChg!=null&&us30yChg!=null ? Math.round((us30yChg-us10yChg)*10000)/10 : null;
 
-    var tiles=[
-      {label:"US 10-Year Yield", val:sb?sb.US10Y_Current:null, chg:sb?sb.US10Y_Daily_Change:null, dec:3, suffix:"%",  invertChg:true,  live:true},
-      {label:"US 30-Year Yield", val:sb?sb.US30Y_Current:null, chg:sb?sb.US30Y_Daily_Change:null, dec:3, suffix:"%",  invertChg:true,  live:true},
-      {label:"ZN Futures",       val:sb?sb.ZN1_Current:null,   chg:sb?sb.ZN1_Daily_Change:null,   dec:3, suffix:"",   invertChg:false, live:true},
-      {label:"MBB ETF",          val:sb?sb.MBB_Current:null,   chg:sb?sb.MBB_Daily_Change:null,   dec:2, suffix:"",   invertChg:false, live:true},
-      {label:"10s/30s Spread",   val:spread10_30,               chg:null,                          dec:1, suffix:" bps",invertChg:false,live:true, derived:true},
-      {label:"MBS–Treasury Spread",  val:null, live:false},
-      {label:"Primary–Secondary Spread", val:null, live:false},
-      {label:"2s/10s Spread",    val:null, live:false}
+    // [displayName, currentStr, chgVal, chgUnit(" bps" or ""), invertBias]
+    var ROWS=[
+      ["MBS–Treasury Spread",        "N/A",                                   null,                               " bps", false],
+      ["Primary–Secondary Spread",   "N/A",                                   null,                               " bps", false],
+      ["US 10-Year Treasury Yield",  us10y!=null?us10y.toFixed(3)+"%":"N/A",  us10yChg!=null?us10yChg*100:null,   " bps", true ],
+      ["US 30-Year Treasury Yield",  us30y!=null?us30y.toFixed(3)+"%":"N/A",  us30yChg!=null?us30yChg*100:null,   " bps", true ],
+      ["ZN Futures (10-Year)",       zn!=null?zn.toFixed(3):"N/A",            znChg,                              "",     false],
+      ["MBB (Mortgage Bond)",        mbb!=null?mbb.toFixed(2):"N/A",          mbbChg,                             "",     false],
+      ["2s/10s Yield Curve Spread",  "N/A",                                   null,                               " bps", false],
+      ["10s/30s Yield Curve Spread", sp1030!=null?sp1030.toFixed(1)+" bps":"N/A", sp1030Chg,                     " bps", false]
     ];
 
+    function biasCell(chgV,inv){
+      if(chgV==null||Math.abs(chgV)<0.05) return '<span class="mdi-neu">Neutral</span>';
+      var favorable=inv?(chgV<0):(chgV>0);
+      return favorable?'<span class="mdi-pos">Favorable</span>':'<span class="mdi-neg">Pressure</span>';
+    }
+
     var html="";
-    tiles.forEach(function(t){
-      var valStr="—";
-      var valColor="var(--ink-4)";
-      var chgHtml="";
-      var badgeHtml="";
-
-      if(t.live&&t.val!=null){
-        valStr=Number(t.val).toFixed(t.dec||2)+(t.suffix||"");
-        valColor="var(--ink)";
-        if(t.chg!=null&&!t.derived){
-          var chgSign=t.chg>0?"+":"";
-          var chgDisplay=chgSign+Number(t.chg).toFixed(t.dec||2)+(t.suffix||"");
-          var improved=t.invertChg?(t.chg<0):(t.chg>0);
-          var flat=Math.abs(t.chg)<0.0005;
-          var chgColor=flat?"var(--flat)":(improved?"var(--better)":"var(--worse)");
-          chgHtml='<div class="mt-chg" style="color:'+chgColor+'">'+chgDisplay+'<span style="font-size:9px;color:var(--ink-4);margin-left:5px">today</span></div>';
-          if(!flat){
-            var bLabel=improved?"FAVORABLE":"PRESSURE";
-            var bColor=improved?"var(--better)":"var(--worse)";
-            var bBg=improved?"rgba(58,210,154,.08)":"rgba(224,86,76,.08)";
-            var bBorder=improved?"rgba(58,210,154,.3)":"rgba(224,86,76,.3)";
-            badgeHtml='<div class="mt-badge" style="color:'+bColor+';background:'+bBg+';border:1px solid '+bBorder+'">'+bLabel+'</div>';
-          }
+    ROWS.forEach(function(r){
+      var name=r[0],curStr=r[1],chgV=r[2],unit=r[3],inv=r[4];
+      var chgStr="0"+unit, chgColor="var(--ink-4)";
+      if(chgV!=null){
+        var rounded=Math.round(chgV*10)/10;
+        if(Math.abs(rounded)>=0.05){
+          chgStr=(rounded>0?"+":"")+rounded.toFixed(1)+unit;
+          chgColor=(inv?(rounded<0):(rounded>0))?"var(--better)":"var(--worse)";
         }
-        if(t.derived){
-          chgHtml='<div class="mt-chg" style="color:var(--ink-4)">30Y minus 10Y</div>';
-        }
-      } else if(!t.live){
-        chgHtml='<div class="mt-soon">chart coming soon</div>';
       }
-
-      html+='<div class="panel mdi-tile'+(t.live&&t.val!=null?"":" is-dim")+'">'+
-        '<div class="mt-label">'+t.label+'</div>'+
-        '<div class="mt-val" style="color:'+valColor+'">'+valStr+'</div>'+
-        chgHtml+
-        badgeHtml+
-      '</div>';
+      html+='<tr>'+
+        '<td class="mdi-name">'+name+'</td>'+
+        '<td class="mdi-val">'+curStr+'</td>'+
+        '<td class="mdi-chg" style="color:'+chgColor+'">'+chgStr+'</td>'+
+        '<td class="mdi-bias">'+biasCell(chgV,inv)+'</td>'+
+      '</tr>';
     });
 
-    $("mdiGrid").innerHTML=html;
+    $("mdiBody").innerHTML=html;
   }
 
   /* ===================================================================
