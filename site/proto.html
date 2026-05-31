@@ -287,6 +287,8 @@ body{
 .all-table .t-name{color:var(--ink-2)}
 .all-table .t-val{color:var(--ink);font-weight:600}
 .all-table .t-src{font-size:10.5px;color:var(--ink-4)}
+.all-table .t-upd{font-size:10.5px;color:var(--ink-4)}
+.bench-card .bench-ts{font-family:var(--font-mono);font-size:9px;color:var(--ink-4);letter-spacing:.06em;margin-top:6px;padding-left:2px}
 
 /* ---------- lri + mdi two-column layout ---------- */
 .lri-mdi-row{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:16px;align-items:start}
@@ -592,6 +594,12 @@ body{
     if(v&&typeof v==="object"&&v.change!=null) return Number(v.change);
     return null;
   }
+  function fredDate(cache,key){
+    if(!cache) return null;
+    var v=cache[key]||cache[key.toLowerCase()]||cache[key.toUpperCase()];
+    if(!v||typeof v!=="object") return null;
+    return v.latestDate||v.date||null;
+  }
   function etDateString(offsetDays){
     var d=new Date(); d.setDate(d.getDate()+offsetDays);
     return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
@@ -620,15 +628,15 @@ body{
       US30Y_Current:4.891, US30Y_Daily_Change:-0.028,
       MBB_Current:96.14,   MBB_Daily_Change:0.08
     },
-    broker_rates:{conv30:6.875, fha30:6.625, va30:6.375, jumbo30:7.125},
+    broker_rates:{conv30:6.875, fha30:6.625, va30:6.375, jumbo30:7.125, last_updated:"2026-05-30T16:29:51Z"},
     fred_cache:{
-      MORTGAGE30US:{latest:6.86, change:-0.04},
-      MORTGAGE15US:{latest:6.12, change:-0.03},
-      OBMMIC30YF:  {latest:6.92, change:-0.02},
-      OBMMIFHA30YF:{latest:6.58, change:-0.03},
-      OBMMIVA30YF: {latest:6.38, change:-0.01},
-      FEDFUNDS:    {latest:5.33, change:0},
-      DPRIME:      {latest:8.50, change:0}
+      MORTGAGE30US:{latest:6.86, change:-0.04, latestDate:"2026-05-29"},
+      MORTGAGE15US:{latest:6.12, change:-0.03, latestDate:"2026-05-29"},
+      OBMMIC30YF:  {latest:6.92, change:-0.02, latestDate:"2026-05-30"},
+      OBMMIFHA30YF:{latest:6.58, change:-0.03, latestDate:"2026-05-30"},
+      OBMMIVA30YF: {latest:6.38, change:-0.01, latestDate:"2026-05-30"},
+      FEDFUNDS:    {latest:5.33, change:0,     latestDate:"2026-05-01"},
+      DPRIME:      {latest:8.50, change:0,     latestDate:"2026-05-01"}
     },
     econ_calendar_today:{events:[
       {time:"8:30 AM ET", event:"Initial Jobless Claims",   impact_label:"High",   forecast:"220K", actual:"215K", star_event:true},
@@ -1012,6 +1020,10 @@ body{
     var govImpact =c?fmtBps(c.gov_lri_bps) +" bps":"—";
     var el=$("benchContent");
 
+    var brokerTsRaw=br&&br.last_updated;
+    var brokerTs=brokerTsRaw?fmtISOTime(brokerTsRaw):(m&&m.fetched_at?fmtISOTime(m.fetched_at):null);
+    var brokerTsLabel=brokerTs&&brokerTs!=="—"?"Updated: "+brokerTs:"";
+
     if(state.benchTab==="standard"){
       var cards=[
         {name:"Conv 30-Year", val:br&&br.conv30,  impact:convImpact, govt:false},
@@ -1034,6 +1046,7 @@ body{
           '<div class="bname">'+card.name+'</div>'+
           '<div class="rate-hero">'+rate+'</div>'+
           '<div class="rate-lbl">Benchmark Rate</div>'+
+          (brokerTsLabel?'<div class="bench-ts">'+brokerTsLabel+'</div>':'')+
           '<div class="bench-rows">'+
             '<div class="bench-row"><span class="bk">Today\'s Impact</span><span class="bv" style="color:'+impColor+'">'+card.impact+'</span></div>'+
             '<div class="bench-row"><span class="bk">Yesterday\'s Impact</span><span class="bv" style="color:var(--ink-4)">—</span></div>'+
@@ -1059,10 +1072,11 @@ body{
       ];
       var rows="";
       allRates.forEach(function(r){
-        var rateStr="N/A",chgStr="—",chgColor="var(--ink-4)";
+        var rateStr="N/A",chgStr="—",chgColor="var(--ink-4)",updStr="—";
         if(r.type==="broker"&&br){
           var bv=br[r.key];
           rateStr=(bv!=null&&!isNaN(bv))?Number(bv).toFixed(3)+"%":"—";
+          updStr=brokerTs&&brokerTs!=="—"?brokerTs:"—";
         } else if(r.type==="fred"){
           var fv=fredVal(fc,r.key),fchg=fredChange(fc,r.key);
           rateStr=fv!=null?fv.toFixed(2)+"%":"—";
@@ -1070,16 +1084,19 @@ body{
             chgStr=(fchg>0?"+":"")+fchg.toFixed(2)+"%";
             chgColor=fchg>0.001?"var(--worse)":fchg<-0.001?"var(--better)":"var(--ink-4)";
           }
+          var fd=fredDate(fc,r.key);
+          updStr=fd||( m&&m.fetched_at?fmtISOTime(m.fetched_at):"—" );
         }
         rows+='<tr>'+
           '<td class="t-name">'+r.name+'</td>'+
           '<td class="t-val">'+rateStr+'</td>'+
           '<td style="font-family:var(--font-mono);font-size:12px;color:'+chgColor+'">'+chgStr+'</td>'+
-          '<td class="t-src">'+r.src+'</td></tr>';
+          '<td class="t-src">'+r.src+'</td>'+
+          '<td class="t-upd">'+updStr+'</td></tr>';
       });
       el.innerHTML='<div class="panel" style="overflow:hidden">'+
         '<table class="all-table"><thead><tr>'+
-          '<th>Instrument</th><th>Rate</th><th>Chg</th><th>Source</th>'+
+          '<th>Instrument</th><th>Rate</th><th>Chg</th><th>Source</th><th>Updated</th>'+
         '</tr></thead><tbody>'+rows+'</tbody></table></div>';
     }
   }
