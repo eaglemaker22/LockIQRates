@@ -288,10 +288,17 @@ body{
 .all-table .t-val{color:var(--ink);font-weight:600}
 .all-table .t-src{font-size:10.5px;color:var(--ink-4)}
 
+/* ---------- lri + mdi two-column layout ---------- */
+.lri-mdi-row{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:16px;align-items:start}
+.lri-col{min-width:0}
+.mdi-col{min-width:0}
+
 /* ---------- market direction indicators (compact table) ---------- */
-.mdi-hd{padding:13px 20px 11px;border-bottom:1px solid var(--line);display:flex;align-items:baseline;gap:18px;flex-wrap:wrap}
-.mdi-hd .mdi-title{font-size:14px;font-weight:600;flex:none}
-.mdi-hd .mdi-sub{font-family:var(--font-mono);font-size:10px;color:var(--ink-4);letter-spacing:.05em}
+.mdi-hd{padding:13px 18px 11px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.mdi-hd .mdi-left{display:flex;flex-direction:column;gap:2px}
+.mdi-hd .mdi-title{font-size:13.5px;font-weight:600}
+.mdi-hd .mdi-sub{font-family:var(--font-mono);font-size:9.5px;color:var(--ink-4);letter-spacing:.04em}
+.mdi-ts{font-family:var(--font-mono);font-size:9.5px;color:var(--ink-4);letter-spacing:.04em;white-space:nowrap;flex:none}
 .mdi-table{width:100%;border-collapse:collapse}
 .mdi-table th{font-family:var(--font-mono);font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-4);padding:8px 18px 7px;border-bottom:1px solid var(--line-strong);white-space:nowrap}
 .mdi-table th:not(:first-child){text-align:right}
@@ -323,6 +330,7 @@ body{
 /* ---------- responsive ---------- */
 @media(max-width:1100px){
   .bench-grid{grid-template-columns:repeat(2,1fr)}
+  .lri-mdi-row{grid-template-columns:1fr}
 }
 @media(max-width:1000px){
   .grid-cards{grid-template-columns:1fr 1fr}
@@ -396,6 +404,10 @@ body{
     <!-- injected -->
   </section>
 
+  <!-- ===== LRI + MDI TWO-COLUMN ROW ===== -->
+  <div class="lri-mdi-row">
+  <div class="lri-col">
+
   <!-- ===== CHART ===== -->
   <section class="panel chartpanel">
     <div class="chart-top">
@@ -442,22 +454,31 @@ body{
     <div class="cell"><div class="k">Last Updated</div><div class="v mono" id="sUpdated">—</div></div>
   </section>
 
+  </div><!-- /lri-col -->
+  <div class="mdi-col">
+
   <!-- ===== MARKET DIRECTION INDICATORS (compact) ===== -->
-  <section class="panel" id="mdiPanel" style="margin-top:16px;overflow:hidden">
+  <section class="panel" id="mdiPanel" style="overflow:hidden">
     <div class="mdi-hd">
-      <span class="mdi-title">Market Direction Indicators</span>
-      <span class="mdi-sub">Key mortgage market drivers behind rate-pricing direction.</span>
+      <div class="mdi-left">
+        <span class="mdi-title">Market Direction Indicators</span>
+        <span class="mdi-sub">Key mortgage market drivers</span>
+      </div>
+      <span class="mdi-ts" id="mdiTs">—</span>
     </div>
     <table class="mdi-table">
       <thead><tr>
         <th>Indicator</th>
         <th style="text-align:right">Current</th>
-        <th style="text-align:right">Today's Change</th>
+        <th style="text-align:right">Chg</th>
         <th style="text-align:right">Bias</th>
       </tr></thead>
       <tbody id="mdiBody"><!-- injected --></tbody>
     </table>
   </section>
+
+  </div><!-- /mdi-col -->
+  </div><!-- /lri-mdi-row -->
 
   <!-- ===== SECTION 2: RATE BENCHMARKS ===== -->
   <div class="section-sep"></div>
@@ -465,7 +486,7 @@ body{
     <div class="section-hd" style="margin-bottom:0">
       <div class="eyebrow">Market Data</div>
       <h2>LockIQ Rate Benchmarks</h2>
-      <p>Benchmark reference rates only — not lender quotes. Rates subject to change without notice.</p>
+      <p>Benchmark reference rates only — not lender quotes. Rates subject to change without notice. <span id="benchUpdated" style="font-family:var(--font-mono);font-size:10.5px;color:var(--ink-4)"></span></p>
     </div>
     <div class="tab-bar" id="benchTabs">
       <button class="active" data-tab="standard">Standard</button>
@@ -480,7 +501,7 @@ body{
     <div class="section-hd" style="margin-bottom:0">
       <div class="eyebrow">Events</div>
       <h2>Economic Calendar</h2>
-      <p>High and medium-impact releases affecting mortgage rates.</p>
+      <p>High and medium-impact releases affecting mortgage rates. <span id="calUpdated" style="font-family:var(--font-mono);font-size:10.5px;color:var(--ink-4)"></span></p>
     </div>
     <div class="tab-bar" id="calTabs">
       <button class="active" data-tab="today">Today</button>
@@ -548,6 +569,15 @@ body{
     var parts=String(ts).split(/[ T]/); return parts[1]||parts[0];
   }
   function shortTime(ts){var t=timeOf(ts);return to12h(t).replace(/ (AM|PM)/," $1");}
+
+  function fmtISOTime(ts){
+    if(!ts) return "—";
+    try{
+      var d=new Date(ts); if(isNaN(d.getTime())) return "—";
+      var h=d.getHours(),m=d.getMinutes(),ap=h>=12?"PM":"AM";
+      return (h%12||12)+":"+(m<10?"0":"")+m+" "+ap;
+    }catch(e){return "—";}
+  }
 
   function fredVal(cache,key){
     if(!cache) return null;
@@ -975,6 +1005,9 @@ body{
     var br=m&&m.broker_rates;
     var fc=m&&m.fred_cache;
     var c=state.current;
+    var benchTs=fmtISOTime(m&&m.fetched_at);
+    var benchEl=$("benchUpdated");
+    if(benchEl) benchEl.textContent=benchTs!=="—"?"Updated: "+benchTs:"";
     var convImpact=c?fmtBps(c.conv_lri_bps)+" bps":"—";
     var govImpact =c?fmtBps(c.gov_lri_bps) +" bps":"—";
     var el=$("benchContent");
@@ -1056,6 +1089,9 @@ body{
   =================================================================== */
   function renderMDI(){
     var sb=state.market&&state.market.shadow_bonds;
+    var mdiTs=fmtISOTime(state.market&&state.market.fetched_at);
+    var mdiTsEl=$("mdiTs");
+    if(mdiTsEl) mdiTsEl.textContent=mdiTs!=="—"?"as of "+mdiTs:"—";
 
     var us10y   = sb&&sb.US10Y_Current!=null    ? Number(sb.US10Y_Current)        : null;
     var us10yChg= sb&&sb.US10Y_Daily_Change!=null? Number(sb.US10Y_Daily_Change)  : null;
@@ -1114,6 +1150,9 @@ body{
   function renderCalendar(){
     var m=state.market;
     if(!m){$("calContent").innerHTML='<div class="cal-empty">Market data unavailable.</div>';return;}
+    var calTs=fmtISOTime((m.econ_calendar_today&&m.econ_calendar_today.updated_at)||m.fetched_at);
+    var calEl=$("calUpdated");
+    if(calEl) calEl.textContent=calTs!=="—"?"Updated: "+calTs:"";
 
     var tomorrowStr=etDateString(1);
     var thisWeek=getWeekRange(0);
