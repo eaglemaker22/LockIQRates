@@ -21,12 +21,12 @@
   --ink-3:#6c7c92;
   --ink-4:#4a576b;
 
-  --teal:#21c7c0;        /* LockIQ accent / Conventional */
+  --teal:#21c7c0;
   --teal-soft:rgba(33,199,192,.14);
-  --better:#3ad29a;      /* green / better */
-  --worse:#e0564c;       /* restrained red / worse */
-  --flat:#7e8ea6;        /* muted blue-gray / flat */
-  --gov:#eaa13c;         /* amber / Government */
+  --better:#3ad29a;
+  --worse:#e0564c;
+  --flat:#7e8ea6;
+  --gov:#eaa13c;
 
   --font-sans:'IBM Plex Sans',system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
   --font-mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
@@ -234,7 +234,7 @@ body{
 .tip .row .nm i{width:11px;height:3px;border-radius:2px;display:inline-block}
 .tip .row .vv{font-weight:600;color:var(--ink)}
 
-/* ---------- anchor strip ---------- */
+/* ---------- reference strip ---------- */
 .strip{display:grid;grid-template-columns:repeat(5,1fr);gap:0;padding:0;overflow:hidden}
 .strip .cell{padding:14px 18px;border-right:1px solid var(--line)}
 .strip .cell:last-child{border-right:0}
@@ -257,9 +257,67 @@ body{
   background-size:200% 100%;animation:sh 1.4s infinite;border-radius:6px;color:transparent!important}
 @keyframes sh{0%{background-position:200% 0}100%{background-position:-200% 0}}
 
-.foot{margin-top:22px;text-align:center;font-family:var(--font-mono);font-size:10.5px;color:var(--ink-4);letter-spacing:.06em}
+/* ---------- section separator ---------- */
+.section-sep{height:1px;background:linear-gradient(90deg,transparent,var(--line-strong) 12%,var(--line-strong) 88%,transparent);margin:36px 0 26px}
+.section-hd{margin-bottom:20px}
+.section-hd h2{margin:8px 0 0;font-size:20px;font-weight:600;letter-spacing:-.01em}
+.section-hd p{margin:6px 0 0;color:var(--ink-2);font-size:12.5px;max-width:600px}
+.section-row{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:20px}
+
+/* ---------- shared tab bar ---------- */
+.tab-bar{display:flex;background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:3px;gap:2px}
+.tab-bar button{font-family:var(--font-mono);font-size:12px;font-weight:600;letter-spacing:.04em;background:transparent;border:0;color:var(--ink-3);padding:6px 14px;border-radius:6px;cursor:pointer;transition:color .15s,background .15s;white-space:nowrap}
+.tab-bar button.active{background:rgba(33,199,192,.14);color:var(--teal)}
+
+/* ---------- rate benchmarks ---------- */
+.bench-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.bench-card{padding:20px 20px 18px;position:relative;overflow:hidden}
+.bench-card .accentbar{position:absolute;left:0;top:0;bottom:0;width:3px}
+.bench-card .bname{font-size:13.5px;font-weight:600;letter-spacing:.01em;margin-bottom:14px;padding-left:2px}
+.bench-card .rate-hero{font-family:var(--font-mono);font-weight:700;font-size:36px;letter-spacing:-.02em;color:var(--ink);line-height:1;padding-left:2px}
+.bench-card .rate-lbl{font-family:var(--font-mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-4);margin-top:5px;padding-left:2px}
+.bench-card .bench-rows{margin-top:14px;padding-top:14px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:7px}
+.bench-card .bench-row{display:flex;align-items:center;justify-content:space-between;gap:8px;font-family:var(--font-mono);font-size:11.5px}
+.bench-card .bench-row .bk{color:var(--ink-4)}
+.bench-card .bench-row .bv{font-weight:600}
+.all-table{width:100%;border-collapse:collapse}
+.all-table th{font-family:var(--font-mono);font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-4);text-align:left;padding:11px 18px 9px;border-bottom:1px solid var(--line-strong)}
+.all-table td{font-family:var(--font-mono);font-size:13px;padding:11px 18px;border-bottom:1px solid var(--line);vertical-align:middle}
+.all-table tr:last-child td{border-bottom:0}
+.all-table .t-name{color:var(--ink-2)}
+.all-table .t-val{color:var(--ink);font-weight:600}
+.all-table .t-src{font-size:10.5px;color:var(--ink-4)}
+
+/* ---------- market direction indicators ---------- */
+.mdi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.mdi-tile{padding:20px 20px 18px;position:relative;overflow:hidden}
+.mdi-tile .mt-label{font-family:var(--font-mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-4);margin-bottom:12px}
+.mdi-tile .mt-val{font-family:var(--font-mono);font-weight:700;font-size:26px;letter-spacing:-.01em;line-height:1;color:var(--ink)}
+.mdi-tile .mt-chg{font-family:var(--font-mono);font-size:12px;margin-top:9px;display:flex;align-items:center;gap:5px}
+.mdi-tile .mt-badge{font-family:var(--font-mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;padding:3px 9px;border-radius:999px;margin-top:10px;display:inline-flex;font-weight:600}
+.mdi-tile .mt-soon{font-family:var(--font-mono);font-size:10px;color:var(--ink-4);margin-top:12px;letter-spacing:.04em}
+.mdi-tile.is-dim .mt-val{color:var(--ink-4)}
+
+/* ---------- economic calendar ---------- */
+.cal-table{width:100%;border-collapse:collapse}
+.cal-table th{font-family:var(--font-mono);font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-4);text-align:left;padding:11px 18px 9px;border-bottom:1px solid var(--line-strong)}
+.cal-table td{font-size:13px;padding:11px 18px;border-bottom:1px solid var(--line);vertical-align:middle}
+.cal-table tr:last-child td{border-bottom:0}
+.cal-time{font-family:var(--font-mono);color:var(--ink-3);white-space:nowrap;font-size:12px}
+.cal-event{color:var(--ink);font-weight:500}
+.cal-num{font-family:var(--font-mono);color:var(--ink-2);text-align:right;font-size:12.5px}
+.cal-num.actual{color:var(--teal);font-weight:600}
+.cal-empty{padding:28px 20px;color:var(--ink-3);font-family:var(--font-mono);font-size:12.5px;text-align:center}
+.imp-high{display:inline-flex;align-items:center;font-family:var(--font-mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;font-weight:600;padding:4px 9px;border-radius:999px;color:var(--worse);border:1px solid rgba(224,86,76,.34);background:rgba(224,86,76,.08)}
+.imp-med{display:inline-flex;align-items:center;font-family:var(--font-mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;font-weight:600;padding:4px 9px;border-radius:999px;color:var(--gov);border:1px solid rgba(234,161,60,.3);background:rgba(234,161,60,.08)}
+
+.foot{margin-top:28px;text-align:center;font-family:var(--font-mono);font-size:10.5px;color:var(--ink-4);letter-spacing:.06em}
 
 /* ---------- responsive ---------- */
+@media(max-width:1100px){
+  .bench-grid{grid-template-columns:repeat(2,1fr)}
+  .mdi-grid{grid-template-columns:repeat(2,1fr)}
+}
 @media(max-width:1000px){
   .grid-cards{grid-template-columns:1fr 1fr}
   .grid-cards .rw{grid-column:1/-1}
@@ -276,11 +334,15 @@ body{
   .herorow{align-items:flex-start}
   .changesince{width:100%;justify-content:space-between}
   .chart-ctrls{width:100%;justify-content:space-between}
+  .bench-grid{grid-template-columns:1fr}
+  .mdi-grid{grid-template-columns:1fr 1fr}
+  .tab-bar button{padding:6px 10px;font-size:11px}
+  .section-row{align-items:flex-start;flex-direction:column;gap:12px}
 }
 </style>
 </head>
 <body>
-<div class="wrap" data-screen-label="LRI Section">
+<div class="wrap">
 
   <!-- ===== HEADER ===== -->
   <header class="topbar">
@@ -292,7 +354,6 @@ body{
       </div>
     </div>
     <div class="right">
-      <div class="statpill"><span>Session</span><b id="hdrSession">—</b></div>
       <div class="statpill"><span class="dot" id="hdrDot"></span><span>Signal</span><b id="hdrSignal">LOADING</b></div>
       <div class="statpill"><span>Updated</span><b id="hdrUpdated" class="mono">—</b></div>
     </div>
@@ -302,23 +363,23 @@ body{
   <!-- ===== HERO CONTROLS ===== -->
   <div class="herorow">
     <div class="title">
-      <div class="eyebrow">Pricing impact since anchor</div>
+      <div class="eyebrow">Pricing impact since today's open</div>
       <h2 style="margin-top:8px">Has the market moved enough to care?</h2>
-      <p>LRI estimates whether lender pricing has likely improved or worsened since this morning's rate-sheet anchor — measured in basis points of pricing.</p>
+      <p>LRI estimates whether lender pricing has likely improved or worsened since this morning's pricing reference — measured in basis points of pricing.</p>
     </div>
     <div class="changesince">
       <span class="lbl">Change since</span>
       <div class="dd" id="dd">
         <button class="dd-btn" id="ddBtn" aria-haspopup="listbox" aria-expanded="false">
           <span class="tk" id="ddTime">7:15 AM</span>
-          <span>Anchor</span>
+          <span>Today's Open</span>
           <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M6 9l6 6 6-6"/></svg>
         </button>
         <div class="dd-menu" role="listbox">
-          <div class="dd-item active"><span><span class="mono" id="ddOptTime">7:15 AM</span> Anchor</span><span class="tag">Active</span></div>
-          <div class="dd-item disabled"><span>5:00 AM Pre-Market</span><span class="tag">Soon</span></div>
-          <div class="dd-item disabled"><span>Prior Close</span><span class="tag">Soon</span></div>
-          <div class="dd-item disabled"><span>Custom Quote Time</span><span class="tag">Soon</span></div>
+          <div class="dd-item active"><span>Today's Open</span><span class="tag">Active</span></div>
+          <div class="dd-item disabled"><span>Yesterday's Close</span><span class="tag">Soon</span></div>
+          <div class="dd-item disabled"><span>Yesterday's Open</span><span class="tag">Soon</span></div>
+          <div class="dd-item disabled"><span>Custom Time Today</span><span class="tag">Soon</span></div>
         </div>
       </div>
     </div>
@@ -333,8 +394,8 @@ body{
   <section class="panel chartpanel">
     <div class="chart-top">
       <div>
-        <h3 id="chartTitle">LRI Since 7:15 AM</h3>
-        <div class="meta" id="chartMeta">Conventional &amp; Government · basis points vs anchor</div>
+        <h3 id="chartTitle">LRI Since Today's Open</h3>
+        <div class="meta" id="chartMeta">Conventional · basis points since today's open</div>
       </div>
       <div class="chart-ctrls">
         <div class="toggle" id="govToggle" role="switch" aria-checked="false">
@@ -361,19 +422,60 @@ body{
     </div>
     <div class="axis-cap">
       <span id="axisStart">—</span>
-      <span style="color:var(--ink-4)">basis points vs 7:15 AM anchor</span>
+      <span style="color:var(--ink-4)">basis points since selected time</span>
       <span id="axisEnd">—</span>
     </div>
   </section>
 
-  <!-- ===== ANCHOR / DATA QUALITY STRIP ===== -->
+  <!-- ===== REFERENCE / DATA QUALITY STRIP ===== -->
   <section class="panel strip" id="strip">
-    <div class="cell"><div class="k">Anchor Time</div><div class="v mono" id="sAnchorTime">—</div></div>
-    <div class="cell"><div class="k">Anchor</div><div class="v" id="sAnchorLabel">—</div></div>
-    <div class="cell"><div class="k">Anchor Status</div><div class="v" id="sAnchorStatus">—</div></div>
+    <div class="cell"><div class="k">Reference Time</div><div class="v mono" id="sAnchorTime">—</div></div>
+    <div class="cell"><div class="k">Reference</div><div class="v" id="sAnchorLabel">—</div></div>
+    <div class="cell"><div class="k">Reference Status</div><div class="v" id="sAnchorStatus">—</div></div>
     <div class="cell"><div class="k">Confidence</div><div class="v" id="sConfidence">—</div></div>
     <div class="cell"><div class="k">Last Updated</div><div class="v mono" id="sUpdated">—</div></div>
   </section>
+
+  <!-- ===== SECTION 2: RATE BENCHMARKS ===== -->
+  <div class="section-sep"></div>
+  <div class="section-row">
+    <div class="section-hd" style="margin-bottom:0">
+      <div class="eyebrow">Market Data</div>
+      <h2>LockIQ Rate Benchmarks</h2>
+      <p>Benchmark reference rates only — not lender quotes. Rates subject to change without notice.</p>
+    </div>
+    <div class="tab-bar" id="benchTabs">
+      <button class="active" data-tab="standard">Standard</button>
+      <button data-tab="all">All Rates</button>
+    </div>
+  </div>
+  <div id="benchContent"><!-- injected --></div>
+
+  <!-- ===== SECTION 3: MARKET DIRECTION INDICATORS ===== -->
+  <div class="section-sep"></div>
+  <div class="section-hd">
+    <div class="eyebrow">Live Signals</div>
+    <h2>Market Direction Indicators</h2>
+    <p>Intraday bond market proxies that influence mortgage pricing direction.</p>
+  </div>
+  <div class="mdi-grid" id="mdiGrid"><!-- injected --></div>
+
+  <!-- ===== SECTION 4: ECONOMIC CALENDAR ===== -->
+  <div class="section-sep"></div>
+  <div class="section-row">
+    <div class="section-hd" style="margin-bottom:0">
+      <div class="eyebrow">Events</div>
+      <h2>Economic Calendar</h2>
+      <p>High and medium-impact releases affecting mortgage rates.</p>
+    </div>
+    <div class="tab-bar" id="calTabs">
+      <button class="active" data-tab="today">Today</button>
+      <button data-tab="tomorrow">Tomorrow</button>
+      <button data-tab="week">This Week</button>
+      <button data-tab="next">Next Week</button>
+    </div>
+  </div>
+  <div class="panel" id="calContent"><!-- injected --></div>
 
   <div class="foot" id="foot">LOCKIQ RATE IMPACT · STANDALONE PROTOTYPE</div>
 </div>
@@ -385,6 +487,7 @@ body{
   /* ---------------- config ---------------- */
   var EP_CURRENT = "/.netlify/functions/getPublicLRI";
   var EP_CHART   = "/.netlify/functions/getPublicLRIChart";
+  var EP_MARKET  = "/.netlify/functions/getMarketData";
   var IS_PROD = /lockiqrates\.com$/i.test(location.hostname);
 
   /* ---------------- helpers ---------------- */
@@ -397,13 +500,13 @@ body{
     if(v===null||v===undefined||isNaN(v)) return "—";
     var r=Math.round(v*10)/10;
     if(Math.abs(r)<0.05) return "0.0";
-    return (r>0?"+":"\u2212")+Math.abs(r).toFixed(1);
+    return (r>0?"+":"−")+Math.abs(r).toFixed(1);
   }
   function fmtDollar(v){
     if(v===null||v===undefined||isNaN(v)) return "$0";
     var r=Math.round(v);
     if(r===0) return "$0";
-    return (r>0?"+$":"\u2212$")+Math.abs(r);
+    return (r>0?"+$":"−$")+Math.abs(r);
   }
   function dirFrom(bps,field){
     if(field){
@@ -416,33 +519,90 @@ body{
     if(bps<=-0.05) return "worse";
     return "flat";
   }
-  function dirLabel(d){return d==="better"?"BETTER SINCE ANCHOR":d==="worse"?"WORSE SINCE ANCHOR":"FLAT SINCE ANCHOR";}
+  function dirLabel(d){return d==="better"?"BETTER SINCE TODAY'S OPEN":d==="worse"?"WORSE SINCE TODAY'S OPEN":"FLAT SINCE TODAY'S OPEN";}
   function badgeLabel(d){return d==="better"?"Better":d==="worse"?"Worse":"Flat";}
 
-  function to12h(hms){ // "07:15:00" -> "7:15 AM"
+  function to12h(hms){
     if(!hms) return "";
     var p=String(hms).split(":"); var h=parseInt(p[0],10), m=p[1]||"00";
     if(isNaN(h)) return hms;
     var ap=h>=12?"PM":"AM"; var h12=h%12; if(h12===0)h12=12;
     return h12+":"+m+" "+ap;
   }
-  function timeOf(ts){ // "2099-01-01 07:15:00" -> "07:15:00"
+  function timeOf(ts){
     if(!ts) return "";
     var parts=String(ts).split(/[ T]/); return parts[1]||parts[0];
   }
   function shortTime(ts){var t=timeOf(ts);return to12h(t).replace(/ (AM|PM)/," $1");}
 
-  /* ---------------- demo fallback (preview only) ---------------- */
+  function fredVal(cache,key){
+    if(!cache) return null;
+    var v=cache[key]||cache[key.toLowerCase()]||cache[key.toUpperCase()];
+    if(v==null) return null;
+    if(typeof v==="object"&&v.latest!=null) return Number(v.latest);
+    var n=Number(v); return isNaN(n)?null:n;
+  }
+  function fredChange(cache,key){
+    if(!cache) return null;
+    var v=cache[key]||cache[key.toLowerCase()]||cache[key.toUpperCase()];
+    if(v&&typeof v==="object"&&v.change!=null) return Number(v.change);
+    return null;
+  }
+  function etDateString(offsetDays){
+    var d=new Date(); d.setDate(d.getDate()+offsetDays);
+    return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
+  }
+  function getWeekRange(weekOffset){
+    var d=new Date(); var day=d.getDay()||7;
+    var mon=new Date(d); mon.setDate(d.getDate()-(day-1)+weekOffset*7);
+    var fri=new Date(mon); fri.setDate(mon.getDate()+4);
+    function iso(dt){return dt.getFullYear()+"-"+pad(dt.getMonth()+1)+"-"+pad(dt.getDate());}
+    return {start:iso(mon),end:iso(fri)};
+  }
+
+  /* ---------------- demo fallback ---------------- */
   var DEMO_CURRENT = {
-    status:"OK", written_at:"2026-05-29 16:30:44", gov_direction:"FLAT",
-    last_updated:"2026-05-29 16:29:51", anchor_label:"LockIQ Pricing Anchor 7:15 AM",
-    anchor_date:"2026-05-29", conv_dollars_per_100k:-6, conv_lri_bps:-0.6,
-    anchor_status:"GOOD", gov_lri_bps:-0.2, trading_date:"2026-05-29",
+    status:"OK", written_at:"2026-05-30 16:30:44", gov_direction:"FLAT",
+    last_updated:"2026-05-30 16:29:51", anchor_label:"LockIQ Pricing Anchor 7:15 AM",
+    anchor_date:"2026-05-30", conv_dollars_per_100k:-6, conv_lri_bps:-0.6,
+    anchor_status:"GOOD", gov_lri_bps:-0.2, trading_date:"2026-05-30",
     anchor_time:"07:15:00", conv_direction:"FLAT", gov_dollars_per_100k:-2,
     confidence:"OK_WITH_WARNINGS", _demo:true
   };
+  var DEMO_MARKET = {
+    shadow_bonds:{
+      ZN1_Current:108.453, ZN1_Daily_Change:0.125,
+      US10Y_Current:4.432, US10Y_Daily_Change:-0.041,
+      US30Y_Current:4.891, US30Y_Daily_Change:-0.028,
+      MBB_Current:96.14,   MBB_Daily_Change:0.08
+    },
+    broker_rates:{conv30:6.875, fha30:6.625, va30:6.375, jumbo30:7.125},
+    fred_cache:{
+      MORTGAGE30US:{latest:6.86, change:-0.04},
+      MORTGAGE15US:{latest:6.12, change:-0.03},
+      OBMMIC30YF:  {latest:6.92, change:-0.02},
+      OBMMIFHA30YF:{latest:6.58, change:-0.03},
+      OBMMIVA30YF: {latest:6.38, change:-0.01},
+      FEDFUNDS:    {latest:5.33, change:0},
+      DPRIME:      {latest:8.50, change:0}
+    },
+    econ_calendar_today:{events:[
+      {time:"8:30 AM ET", event:"Initial Jobless Claims",   impact_label:"High",   forecast:"220K", actual:"215K", star_event:true},
+      {time:"10:00 AM ET",event:"Existing Home Sales",      impact_label:"Medium", forecast:"4.15M",actual:null}
+    ]},
+    econ_calendar_upcoming:{events:[
+      {date:"2026-05-31",time:"8:30 AM ET", event:"PCE Price Index (MoM)",       impact_label:"High",   forecast:"0.3%", actual:null, star_event:true},
+      {date:"2026-05-31",time:"10:00 AM ET",event:"Consumer Sentiment (Final)",   impact_label:"Medium", forecast:"52.2", actual:null},
+      {date:"2026-06-02",time:"8:30 AM ET", event:"Non-Farm Payrolls",            impact_label:"High",   forecast:"180K", actual:null, star_event:true},
+      {date:"2026-06-02",time:"8:30 AM ET", event:"Unemployment Rate",            impact_label:"High",   forecast:"4.2%", actual:null},
+      {date:"2026-06-03",time:"10:00 AM ET",event:"ISM Services PMI",             impact_label:"High",   forecast:"50.8", actual:null},
+      {date:"2026-06-09",time:"8:30 AM ET", event:"CPI (YoY)",                    impact_label:"High",   forecast:"2.6%", actual:null, star_event:true},
+      {date:"2026-06-11",time:"2:00 PM ET", event:"FOMC Rate Decision",           impact_label:"High",   forecast:"5.25-5.50%", actual:null, star_event:true}
+    ]},
+    _demo:true
+  };
+
   function demoChart(date){
-    // believable intraday wander, ending near current flat values
     var conv=[0,2.1,3.4,2.6,4.1,3.2,1.4,-0.8,-2.3,-1.1,0.6,1.8,0.9,-0.2,-0.6];
     var gov =[0,0.9,1.6,1.2,1.9,1.3,0.4,-0.6,-1.2,-0.7,0.1,0.7,0.3,-0.1,-0.2];
     var startMin=7*60+15, stepMin=38, pts=[];
@@ -465,15 +625,16 @@ body{
   }
 
   /* ---------------- state ---------------- */
-  var state={current:null,chart:null,chartDate:null,overrideDate:null,showGov:false,xs:[],points:[]};
+  var state={
+    current:null, chart:null, chartDate:null, overrideDate:null,
+    showGov:false, xs:[], points:[],
+    market:null, benchTab:"standard", calTab:"today"
+  };
 
   /* ===================================================================
      RENDER: header
   =================================================================== */
   function renderHeader(c){
-    var now=new Date();
-    var sess=(now.getHours()>=8&&now.getHours()<17)?"OPEN":"CLOSED";
-    $("hdrSession").textContent=sess;
     var conf=(c.confidence||"").toUpperCase();
     var dot=$("hdrDot");
     dot.className="dot"+(conf.indexOf("WARN")>=0?" stale":"");
@@ -500,30 +661,29 @@ body{
   }
 
   var RW_LEVELS=[
-    {name:"LOW",      max:3,         col:"var(--flat)"},
-    {name:"WATCH",    max:7,         col:"var(--gov)"},
-    {name:"MODERATE", max:12,        col:"var(--gov)"},
-    {name:"HIGH",     max:20,        col:"var(--worse)"},
-    {name:"EXTREME",  max:Infinity,  col:"var(--worse)"}
+    {name:"LOW",      max:3,        col:"var(--flat)"},
+    {name:"WATCH",    max:7,        col:"var(--gov)"},
+    {name:"MODERATE", max:12,       col:"var(--gov)"},
+    {name:"HIGH",     max:20,       col:"var(--worse)"},
+    {name:"EXTREME",  max:Infinity, col:"var(--worse)"}
   ];
   function repriceLevel(mag){for(var i=0;i<RW_LEVELS.length;i++){if(mag<RW_LEVELS[i].max)return i;}return 4;}
   function repriceMsg(idx,move){
     if(idx===0) return "No meaningful reprice pressure indicated.";
-    if(move<0) return "Pricing pressure has moved worse since anchor. Some lenders may be watching for reprice risk.";
-    return "Pricing has improved meaningfully since anchor. Better pricing may be possible if lenders update.";
+    if(move<0) return "Pricing pressure has moved worse since today's open. Some lenders may be watching for reprice risk.";
+    return "Pricing has improved meaningfully since today's open. Better pricing may be possible if lenders update.";
   }
   function repriceCard(conv,gov){
-    // larger absolute move drives the watch
-    var move = Math.abs(conv)>=Math.abs(gov) ? conv : gov;
+    var move=Math.abs(conv)>=Math.abs(gov)?conv:gov;
     var mag=Math.abs(move);
     var idx=repriceLevel(mag);
     var lvl=RW_LEVELS[idx];
-    var col = idx===0?"var(--flat)":(move<0? RW_LEVELS[idx].col : "var(--better)");
+    var col=idx===0?"var(--flat)":(move<0?RW_LEVELS[idx].col:"var(--better)");
     var segs="",labels="";
     for(var i=0;i<5;i++){
       var on=i<=idx;
-      segs+='<div class="seg'+(on?' on':'')+'" style="--segcol:'+(on?col:'')+'"></div>';
-      labels+='<span class="'+(i===idx?'cur':'')+'">'+RW_LEVELS[i].name+'</span>';
+      segs+='<div class="seg'+(on?" on":"")+'" style="--segcol:'+(on?col:"")+'"></div>';
+      labels+='<span class="'+(i===idx?"cur":"")+'">'+RW_LEVELS[i].name+'</span>';
     }
     return ''+
     '<div class="panel rw">'+
@@ -541,13 +701,13 @@ body{
   }
 
   function renderCards(c){
-    $("cardsGrid").innerHTML =
-      impactCard("Conventional LRI", c.conv_lri_bps, c.conv_dollars_per_100k, c.conv_direction)+
-      impactCard("Government LRI",   c.gov_lri_bps,  c.gov_dollars_per_100k,  c.gov_direction)+
-      repriceCard(c.conv_lri_bps||0, c.gov_lri_bps||0);
+    $("cardsGrid").innerHTML=
+      impactCard("Conventional LRI",c.conv_lri_bps,c.conv_dollars_per_100k,c.conv_direction)+
+      impactCard("Government LRI",  c.gov_lri_bps, c.gov_dollars_per_100k, c.gov_direction)+
+      repriceCard(c.conv_lri_bps||0,c.gov_lri_bps||0);
   }
   function renderCardsError(){
-    $("cardsGrid").innerHTML =
+    $("cardsGrid").innerHTML=
       '<div class="panel errmod" style="grid-column:1/-1">'+
         '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>'+
         '<div class="t">LRI current signal unavailable.</div>'+
@@ -562,13 +722,13 @@ body{
   =================================================================== */
   function qClass(s){s=(s||"").toUpperCase();if(s.indexOf("GOOD")>=0||s==="OK")return"q-good";if(s.indexOf("WARN")>=0)return"q-warn";if(s.indexOf("BAD")>=0||s.indexOf("STALE")>=0)return"q-bad";return"q-good";}
   function renderStrip(c){
-    $("sAnchorTime").textContent = c.anchor_time||"—";
-    $("sAnchorLabel").textContent = (c.anchor_label||"—").replace("LockIQ Pricing Anchor","").trim()||c.anchor_label||"—";
+    $("sAnchorTime").textContent=c.anchor_time||"—";
+    $("sAnchorLabel").textContent=(c.anchor_label||"—").replace("LockIQ Pricing Anchor","").trim()||c.anchor_label||"—";
     var asCls=qClass(c.anchor_status);
     $("sAnchorStatus").innerHTML='<span class="q-dot '+asCls+'" style="background:currentColor"></span><span class="'+asCls+'">'+(c.anchor_status||"—")+'</span>';
     var cfCls=qClass(c.confidence);
     $("sConfidence").innerHTML='<span class="'+cfCls+'">'+(c.confidence||"—")+'</span>';
-    $("sUpdated").textContent = c.last_updated||"—";
+    $("sUpdated").textContent=c.last_updated||"—";
   }
 
   /* ===================================================================
@@ -578,8 +738,7 @@ body{
 
   function renderChart(){
     var host=$("chartHost");
-    var note=$("chartNote"), noteTx=$("chartNoteTx");
-    // remove previous svg
+    var note=$("chartNote"),noteTx=$("chartNoteTx");
     var old=host.querySelector("svg"); if(old) old.remove();
 
     var pts=state.points||[];
@@ -589,18 +748,12 @@ body{
       $("axisStart").textContent="—";$("axisEnd").textContent="—";
       return;
     }
-    if(pts.length===1){
-      note.style.display="none";
-      // draw single dot + note overlay
-    } else {
-      note.style.display="none";
-    }
+    if(pts.length===1){note.style.display="none";}else{note.style.display="none";}
 
     var W=host.clientWidth||900, H=340;
     var padL=58,padR=70,padT=26,padB=38;
     var plotW=W-padL-padR, plotH=H-padT-padB;
 
-    // y domain symmetric around 0
     var maxAbs=2;
     pts.forEach(function(p){
       var cv=num(p.conv_lri_bps); if(cv!==null) maxAbs=Math.max(maxAbs,Math.abs(cv));
@@ -609,7 +762,7 @@ body{
     maxAbs=Math.ceil(maxAbs*1.25);
     var yMin=-maxAbs,yMax=maxAbs;
 
-    function sx(i){return pts.length===1? padL+plotW/2 : padL+(i/(pts.length-1))*plotW;}
+    function sx(i){return pts.length===1?padL+plotW/2:padL+(i/(pts.length-1))*plotW;}
     function sy(v){return padT+(1-(v-yMin)/(yMax-yMin))*plotH;}
     var yZero=sy(0);
 
@@ -618,9 +771,8 @@ body{
     var NS="http://www.w3.org/2000/svg";
     var svg=document.createElementNS(NS,"svg");
     svg.setAttribute("viewBox","0 0 "+W+" "+H);
-    svg.setAttribute("width",W); svg.setAttribute("height",H);
+    svg.setAttribute("width",W);svg.setAttribute("height",H);
 
-    // defs: area gradient with zero crossing
     var zf=(yZero-padT)/plotH;
     var defs=
       '<defs>'+
@@ -633,21 +785,18 @@ body{
         '<filter id="glowT" x="-30%" y="-60%" width="160%" height="220%"><feGaussianBlur stdDeviation="3.2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>'+
       '</defs>';
 
-    // gridlines (y)
     var grid="";
-    var ticks=[yMax, yMax/2, 0, yMin/2, yMin];
+    var ticks=[yMax,yMax/2,0,yMin/2,yMin];
     ticks.forEach(function(tv){
-      var y=sy(tv); var isZero=Math.abs(tv)<0.001;
-      grid+='<line x1="'+padL+'" y1="'+y+'" x2="'+(W-padR)+'" y2="'+y+'" stroke="'+(isZero?'rgba(231,238,247,.32)':'rgba(148,178,214,.08)')+'" stroke-width="'+(isZero?1.2:1)+'" '+(isZero?'':'stroke-dasharray="2 5"')+'/>';
+      var y=sy(tv);var isZero=Math.abs(tv)<0.001;
+      grid+='<line x1="'+padL+'" y1="'+y+'" x2="'+(W-padR)+'" y2="'+y+'" stroke="'+(isZero?"rgba(231,238,247,.32)":"rgba(148,178,214,.08)")+'" stroke-width="'+(isZero?1.2:1)+'" '+(isZero?"":"stroke-dasharray=\"2 5\"")+'/>';
       var lbl=(tv>0?"+":"")+Math.round(tv);
-      grid+='<text x="'+(padL-10)+'" y="'+(y+3.5)+'" text-anchor="end" font-family="IBM Plex Mono,monospace" font-size="10.5" fill="'+(isZero?'#9fb0c6':'#6c7c92')+'">'+(isZero?"0":lbl)+'</text>';
+      grid+='<text x="'+(padL-10)+'" y="'+(y+3.5)+'" text-anchor="end" font-family="IBM Plex Mono,monospace" font-size="10.5" fill="'+(isZero?"#9fb0c6":"#6c7c92")+'">'+(isZero?"0":lbl)+'</text>';
     });
-    // better / worse y captions (inside plot, avoid gutter collision)
     grid+='<text x="'+(padL+8)+'" y="'+(padT+13)+'" text-anchor="start" font-family="IBM Plex Mono,monospace" font-size="8.5" fill="#3ad29a" fill-opacity="0.7" letter-spacing="1.5">BETTER ▲</text>';
     grid+='<text x="'+(padL+8)+'" y="'+(padT+plotH-6)+'" text-anchor="start" font-family="IBM Plex Mono,monospace" font-size="8.5" fill="#e0564c" fill-opacity="0.7" letter-spacing="1.5">WORSE ▼</text>';
-    grid+='<text x="'+(W-padR+8)+'" y="'+(yZero+3.5)+'" text-anchor="start" font-family="IBM Plex Mono,monospace" font-size="8.5" fill="#9fb0c6" letter-spacing="1">ANCHOR</text>';
+    grid+='<text x="'+(W-padR+8)+'" y="'+(yZero+3.5)+'" text-anchor="start" font-family="IBM Plex Mono,monospace" font-size="8.5" fill="#9fb0c6" letter-spacing="1">OPEN</text>';
 
-    // x ticks (~5)
     var xc=Math.min(5,pts.length);
     var xticks="";
     if(pts.length>1){
@@ -658,7 +807,6 @@ body{
       }
     }
 
-    // build conv line + area
     function pathFor(key){
       var d="";
       pts.forEach(function(p,i){
@@ -668,7 +816,7 @@ body{
       return d.trim();
     }
     var convPath=pathFor("conv_lri_bps");
-    var convArea=convPath? (convPath+" L"+sx(pts.length-1).toFixed(1)+" "+yZero.toFixed(1)+" L"+sx(0).toFixed(1)+" "+yZero.toFixed(1)+" Z") : "";
+    var convArea=convPath?(convPath+" L"+sx(pts.length-1).toFixed(1)+" "+yZero.toFixed(1)+" L"+sx(0).toFixed(1)+" "+yZero.toFixed(1)+" Z"):"";
 
     var govDraw="";
     if(state.showGov){
@@ -683,7 +831,6 @@ body{
         '<path d="'+convPath+'" fill="none" stroke="#21c7c0" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" filter="url(#glowT)"/>';
     }
 
-    // latest point highlight (conv)
     var lastI=pts.length-1, lcv=num(pts[lastI].conv_lri_bps);
     var lastDot="";
     if(lcv!==null){
@@ -691,18 +838,13 @@ body{
       lastDot=
         '<circle cx="'+lx+'" cy="'+ly+'" r="8" fill="#21c7c0" opacity="0.16"/>'+
         '<circle cx="'+lx+'" cy="'+ly+'" r="4.4" fill="#0a111c" stroke="#21c7c0" stroke-width="2.4"/>';
-      // value label chip
-      var chipY=Math.max(padT+10,Math.min(ly-14,padT+plotH-10));
-      lastDot+='<g><rect x="'+(lx-(pts.length>1?0:0))+'" y="0" width="0" height="0"/></g>';
     }
-    // single point note
     var singleNote="";
     if(pts.length===1){
-      var sxs=sx(0),sys=sy(lcv===null?0:lcv);
-      singleNote='<circle cx="'+sxs+'" cy="'+sys+'" r="8" fill="#21c7c0" opacity="0.16"/><circle cx="'+sxs+'" cy="'+sys+'" r="4.4" fill="#0a111c" stroke="#21c7c0" stroke-width="2.4"/>';
+      var sxs=sx(0),sys2=sy(lcv===null?0:lcv);
+      singleNote='<circle cx="'+sxs+'" cy="'+sys2+'" r="8" fill="#21c7c0" opacity="0.16"/><circle cx="'+sxs+'" cy="'+sys2+'" r="4.4" fill="#0a111c" stroke="#21c7c0" stroke-width="2.4"/>';
     }
 
-    // hover layer
     var hover='<line id="crossX" x1="0" y1="'+padT+'" x2="0" y2="'+(padT+plotH)+'" stroke="rgba(33,199,192,.4)" stroke-width="1" opacity="0"/>'+
       '<circle id="hoverConv" r="4" fill="#21c7c0" stroke="#0a111c" stroke-width="2" opacity="0"/>'+
       '<circle id="hoverGov" r="3.5" fill="#eaa13c" stroke="#0a111c" stroke-width="2" opacity="0"/>'+
@@ -711,17 +853,14 @@ body{
     svg.innerHTML=defs+grid+xticks+convDraw+govDraw+lastDot+singleNote+hover;
     host.insertBefore(svg,host.firstChild);
 
-    // axis caption
     $("axisStart").textContent=shortTime(pts[0].timestamp);
     $("axisEnd").textContent=shortTime(pts[lastI].timestamp);
 
-    // single point note overlay
     if(pts.length===1){
       note.style.display="flex";
       noteTx.textContent="Only one LRI tick available. Chart line will appear after more ticks are collected.";
     }
 
-    // wire hover
     wireHover(svg,pts,sx,sy);
   }
 
@@ -750,7 +889,6 @@ body{
       cross.setAttribute("x1",x);cross.setAttribute("x2",x);cross.setAttribute("opacity","1");
       if(cv!==null){hc.setAttribute("cx",x);hc.setAttribute("cy",sy(cv));hc.setAttribute("opacity","1");}else hc.setAttribute("opacity","0");
       if(state.showGov&&gv!==null){hg.setAttribute("cx",x);hg.setAttribute("cy",sy(gv));hg.setAttribute("opacity","1");}else hg.setAttribute("opacity","0");
-      // tooltip
       var rows='<div class="row"><span class="nm"><i style="background:#21c7c0"></i>Conventional</span><span class="vv">'+fmtBps(cv)+' bps</span></div>';
       if(state.showGov) rows+='<div class="row"><span class="nm"><i style="background:#eaa13c"></i>Government</span><span class="vv">'+fmtBps(gv)+' bps</span></div>';
       tip.innerHTML='<div class="tt">'+shortTime(p.timestamp)+'</div>'+rows;
@@ -759,7 +897,7 @@ body{
       var scale=rect.width/svg.viewBox.baseVal.width;
       var leftPx=x*scale;
       tip.style.left=Math.max(70,Math.min(host.clientWidth-78,leftPx))+"px";
-      tip.style.top=(sy(cv===null?0:cv)*scale - tip.offsetHeight - 14)+"px";
+      tip.style.top=(sy(cv===null?0:cv)*scale-tip.offsetHeight-14)+"px";
       tip.style.transform="translateX(-50%)";
     }
     function leave(){cross.setAttribute("opacity","0");hc.setAttribute("opacity","0");hg.setAttribute("opacity","0");$("tip").style.opacity="0";}
@@ -770,11 +908,11 @@ body{
   }
 
   /* ===================================================================
-     load + orchestrate
+     load helpers
   =================================================================== */
   function applyAnchorLabels(c){
     var t12=to12h(c.anchor_time||"07:15:00");
-    $("ddTime").textContent=t12;$("ddOptTime").textContent=t12;
+    $("ddTime").textContent=t12;
     $("chartTitle").textContent="LRI Since "+t12;
   }
 
@@ -809,11 +947,222 @@ body{
       return demoChart(date);
     });
   }
+  function loadMarket(){
+    return fetch(EP_MARKET,{headers:{accept:"application/json"}})
+      .then(function(r){if(!r.ok) throw 0; return r.json();})
+      .catch(function(){return IS_PROD?null:DEMO_MARKET;});
+  }
 
+  /* ===================================================================
+     RENDER: rate benchmarks (Section 2)
+  =================================================================== */
+  function renderBenchmarks(){
+    var m=state.market;
+    var br=m&&m.broker_rates;
+    var fc=m&&m.fred_cache;
+    var c=state.current;
+    var convImpact=c?fmtBps(c.conv_lri_bps)+" bps":"—";
+    var govImpact =c?fmtBps(c.gov_lri_bps) +" bps":"—";
+    var el=$("benchContent");
+
+    if(state.benchTab==="standard"){
+      var cards=[
+        {name:"Conv 30-Year", val:br&&br.conv30,  impact:convImpact, govt:false},
+        {name:"FHA 30-Year",  val:br&&br.fha30,   impact:govImpact,  govt:true},
+        {name:"VA 30-Year",   val:br&&br.va30,    impact:govImpact,  govt:true},
+        {name:"Jumbo 30-Year",val:br&&br.jumbo30, impact:convImpact, govt:false}
+      ];
+      var html='<div class="bench-grid">';
+      cards.forEach(function(card){
+        var v=card.val;
+        var rate=(v!=null&&!isNaN(v))?Number(v).toFixed(3)+"%":"—";
+        var ac=card.govt?"var(--gov)":"var(--teal)";
+        var impColor="var(--ink-2)";
+        if(c){
+          var bpsV=card.govt?(c.gov_lri_bps||0):(c.conv_lri_bps||0);
+          impColor=bpsV>=0.05?"var(--better)":bpsV<=-0.05?"var(--worse)":"var(--flat)";
+        }
+        html+='<div class="panel bench-card">'+
+          '<div class="accentbar" style="background:'+ac+'"></div>'+
+          '<div class="bname">'+card.name+'</div>'+
+          '<div class="rate-hero">'+rate+'</div>'+
+          '<div class="rate-lbl">Benchmark Rate</div>'+
+          '<div class="bench-rows">'+
+            '<div class="bench-row"><span class="bk">Today\'s Impact</span><span class="bv" style="color:'+impColor+'">'+card.impact+'</span></div>'+
+            '<div class="bench-row"><span class="bk">Yesterday\'s Impact</span><span class="bv" style="color:var(--ink-4)">—</span></div>'+
+          '</div>'+
+        '</div>';
+      });
+      html+='</div>';
+      el.innerHTML=html;
+    } else {
+      var rows="";
+      var brList=[
+        {name:"Conv 30Y (Broker)",val:br&&br.conv30,  src:"LockIQ Live"},
+        {name:"FHA 30Y (Broker)", val:br&&br.fha30,   src:"LockIQ Live"},
+        {name:"VA 30Y (Broker)",  val:br&&br.va30,    src:"LockIQ Live"},
+        {name:"Jumbo 30Y (Broker)",val:br&&br.jumbo30,src:"LockIQ Live"}
+      ];
+      var fredList=[
+        {name:"Freddie 30Y Fixed",key:"MORTGAGE30US", src:"Freddie Mac PMMS"},
+        {name:"Freddie 15Y Fixed",key:"MORTGAGE15US", src:"Freddie Mac PMMS"},
+        {name:"Opt Blue 30Y Conv",key:"OBMMIC30YF",   src:"Optimal Blue / FRED"},
+        {name:"Opt Blue 30Y FHA", key:"OBMMIFHA30YF", src:"Optimal Blue / FRED"},
+        {name:"Opt Blue 30Y VA",  key:"OBMMIVA30YF",  src:"Optimal Blue / FRED"},
+        {name:"Fed Funds Rate",   key:"FEDFUNDS",     src:"FRED / Fed"},
+        {name:"Prime Rate",       key:"DPRIME",       src:"FRED / WSJ"}
+      ];
+      brList.forEach(function(r){
+        var v=r.val;
+        var rate=(v!=null&&!isNaN(v))?Number(v).toFixed(3)+"%":"—";
+        rows+='<tr><td class="t-name">'+r.name+'</td><td class="t-val">'+rate+'</td><td style="font-family:var(--font-mono);font-size:12px;color:var(--ink-4)">—</td><td class="t-src">'+r.src+'</td></tr>';
+      });
+      fredList.forEach(function(r){
+        var v=fredVal(fc,r.key);
+        var chg=fredChange(fc,r.key);
+        var rate=v!=null?v.toFixed(2)+"%":"—";
+        var chgStr="—"; var chgColor="var(--ink-4)";
+        if(chg!=null){
+          chgStr=(chg>0?"+":"")+chg.toFixed(2)+"%";
+          chgColor=chg>0.001?"var(--worse)":chg<-0.001?"var(--better)":"var(--ink-4)";
+        }
+        rows+='<tr><td class="t-name">'+r.name+'</td><td class="t-val">'+rate+'</td><td style="font-family:var(--font-mono);font-size:12px;color:'+chgColor+'">'+chgStr+'</td><td class="t-src">'+r.src+'</td></tr>';
+      });
+      el.innerHTML='<div class="panel" style="overflow:hidden">'+
+        '<table class="all-table"><thead><tr>'+
+          '<th>Instrument</th><th>Rate</th><th>Chg</th><th>Source</th>'+
+        '</tr></thead><tbody>'+rows+'</tbody></table></div>';
+    }
+  }
+
+  /* ===================================================================
+     RENDER: market direction indicators (Section 3)
+  =================================================================== */
+  function renderMDI(){
+    var sb=state.market&&state.market.shadow_bonds;
+
+    var spread10_30=null;
+    if(sb&&sb.US30Y_Current!=null&&sb.US10Y_Current!=null){
+      spread10_30=Math.round((sb.US30Y_Current-sb.US10Y_Current)*1000)/10;
+    }
+
+    var tiles=[
+      {label:"US 10-Year Yield", val:sb?sb.US10Y_Current:null, chg:sb?sb.US10Y_Daily_Change:null, dec:3, suffix:"%",  invertChg:true,  live:true},
+      {label:"US 30-Year Yield", val:sb?sb.US30Y_Current:null, chg:sb?sb.US30Y_Daily_Change:null, dec:3, suffix:"%",  invertChg:true,  live:true},
+      {label:"ZN Futures",       val:sb?sb.ZN1_Current:null,   chg:sb?sb.ZN1_Daily_Change:null,   dec:3, suffix:"",   invertChg:false, live:true},
+      {label:"MBB ETF",          val:sb?sb.MBB_Current:null,   chg:sb?sb.MBB_Daily_Change:null,   dec:2, suffix:"",   invertChg:false, live:true},
+      {label:"10s/30s Spread",   val:spread10_30,               chg:null,                          dec:1, suffix:" bps",invertChg:false,live:true, derived:true},
+      {label:"MBS–Treasury Spread",  val:null, live:false},
+      {label:"Primary–Secondary Spread", val:null, live:false},
+      {label:"2s/10s Spread",    val:null, live:false}
+    ];
+
+    var html="";
+    tiles.forEach(function(t){
+      var valStr="—";
+      var valColor="var(--ink-4)";
+      var chgHtml="";
+      var badgeHtml="";
+
+      if(t.live&&t.val!=null){
+        valStr=Number(t.val).toFixed(t.dec||2)+(t.suffix||"");
+        valColor="var(--ink)";
+        if(t.chg!=null&&!t.derived){
+          var chgSign=t.chg>0?"+":"";
+          var chgDisplay=chgSign+Number(t.chg).toFixed(t.dec||2)+(t.suffix||"");
+          var improved=t.invertChg?(t.chg<0):(t.chg>0);
+          var flat=Math.abs(t.chg)<0.0005;
+          var chgColor=flat?"var(--flat)":(improved?"var(--better)":"var(--worse)");
+          chgHtml='<div class="mt-chg" style="color:'+chgColor+'">'+chgDisplay+'<span style="font-size:9px;color:var(--ink-4);margin-left:5px">today</span></div>';
+          if(!flat){
+            var bLabel=improved?"FAVORABLE":"PRESSURE";
+            var bColor=improved?"var(--better)":"var(--worse)";
+            var bBg=improved?"rgba(58,210,154,.08)":"rgba(224,86,76,.08)";
+            var bBorder=improved?"rgba(58,210,154,.3)":"rgba(224,86,76,.3)";
+            badgeHtml='<div class="mt-badge" style="color:'+bColor+';background:'+bBg+';border:1px solid '+bBorder+'">'+bLabel+'</div>';
+          }
+        }
+        if(t.derived){
+          chgHtml='<div class="mt-chg" style="color:var(--ink-4)">30Y minus 10Y</div>';
+        }
+      } else if(!t.live){
+        chgHtml='<div class="mt-soon">chart coming soon</div>';
+      }
+
+      html+='<div class="panel mdi-tile'+(t.live&&t.val!=null?"":" is-dim")+'">'+
+        '<div class="mt-label">'+t.label+'</div>'+
+        '<div class="mt-val" style="color:'+valColor+'">'+valStr+'</div>'+
+        chgHtml+
+        badgeHtml+
+      '</div>';
+    });
+
+    $("mdiGrid").innerHTML=html;
+  }
+
+  /* ===================================================================
+     RENDER: economic calendar (Section 4)
+  =================================================================== */
+  function renderCalendar(){
+    var m=state.market;
+    if(!m){$("calContent").innerHTML='<div class="cal-empty">Market data unavailable.</div>';return;}
+
+    var tomorrowStr=etDateString(1);
+    var thisWeek=getWeekRange(0);
+    var nextWeek=getWeekRange(1);
+
+    var rawEvents=[];
+    if(state.calTab==="today"){
+      rawEvents=(m.econ_calendar_today&&m.econ_calendar_today.events)||[];
+    } else if(state.calTab==="tomorrow"){
+      rawEvents=((m.econ_calendar_upcoming&&m.econ_calendar_upcoming.events)||[]).filter(function(e){return e.date===tomorrowStr;});
+    } else if(state.calTab==="week"){
+      rawEvents=((m.econ_calendar_upcoming&&m.econ_calendar_upcoming.events)||[]).filter(function(e){return e.date>=thisWeek.start&&e.date<=thisWeek.end;});
+    } else {
+      rawEvents=((m.econ_calendar_upcoming&&m.econ_calendar_upcoming.events)||[]).filter(function(e){return e.date>=nextWeek.start&&e.date<=nextWeek.end;});
+    }
+
+    var events=rawEvents.filter(function(e){return e.impact_label!=="Low"||e.star_event===true;});
+
+    if(!events.length){
+      $("calContent").innerHTML='<div class="cal-empty">No high or medium-impact events scheduled for this period.</div>';
+      return;
+    }
+
+    var showDate=state.calTab!=="today";
+    var dateHdr=showDate?"<th>Date</th>":"";
+
+    var rows=events.map(function(e){
+      var badge=e.impact_label==="High"?'<span class="imp-high">HIGH</span>':'<span class="imp-med">MED</span>';
+      var forecast=(e.forecast!=null&&e.forecast!="")?e.forecast:"—";
+      var actual=(e.actual!=null&&e.actual!="")
+        ?'<span class="cal-num actual">'+e.actual+'</span>'
+        :'<span class="cal-num" style="color:var(--ink-4)">—</span>';
+      var dateCell=showDate?'<td class="cal-time">'+e.date+'</td>':"";
+      return '<tr>'+dateCell+
+        '<td class="cal-time">'+(e.time||"—")+'</td>'+
+        '<td class="cal-event">'+(e.event||"")+'</td>'+
+        '<td>'+badge+'</td>'+
+        '<td style="text-align:right"><span class="cal-num">'+forecast+'</span></td>'+
+        '<td style="text-align:right">'+actual+'</td>'+
+      '</tr>';
+    }).join("");
+
+    $("calContent").innerHTML='<table class="cal-table">'+
+      '<thead><tr>'+dateHdr+'<th>Time ET</th><th>Event</th><th>Impact</th>'+
+      '<th style="text-align:right">Forecast</th><th style="text-align:right">Actual</th></tr></thead>'+
+      '<tbody>'+rows+'</tbody></table>';
+  }
+
+  /* ===================================================================
+     init
+  =================================================================== */
   function init(){
     state.overrideDate=getParam("date");
 
-    loadCurrent().then(function(c){
+    var marketPromise=loadMarket().then(function(mk){state.market=mk;});
+
+    var mainPromise=loadCurrent().then(function(c){
       state.current=c;
       applyAnchorLabels(c);
       renderHeader(c);
@@ -821,8 +1170,7 @@ body{
       renderStrip(c);
       if(c._demo) $("foot").textContent="LOCKIQ RATE IMPACT · STANDALONE PROTOTYPE · SAMPLE DATA (endpoint unreachable in preview)";
 
-      // resolve chart date
-      var cd = state.overrideDate || c.trading_date || todayISO();
+      var cd=state.overrideDate||c.trading_date||todayISO();
       state.chartDate=cd;
       if(state.overrideDate) showOverride(state.overrideDate);
 
@@ -832,38 +1180,55 @@ body{
       state.chart=ch;
       state.points=(ch.points||[]).slice().sort(function(a,b){return String(a.timestamp).localeCompare(String(b.timestamp));});
       renderChart();
-    }).catch(function(err){
-      // current failed (prod) -> error modules
+    }).catch(function(){
       renderCardsError();
       renderStrip({});
       setChartError();
     });
 
-    // chart-only failure when current ok but chart endpoint dead (prod)
-    // handled within loadChart catch chaining above for prod via throw
+    Promise.all([mainPromise,marketPromise]).then(function(){
+      renderBenchmarks();
+      renderMDI();
+      renderCalendar();
+    }).catch(function(){
+      renderBenchmarks();
+      renderMDI();
+      renderCalendar();
+    });
   }
 
   /* ---------------- interactions ---------------- */
-  // government toggle
   $("govToggle").addEventListener("click",function(){
     state.showGov=!state.showGov;
     this.classList.toggle("on",state.showGov);
     this.setAttribute("aria-checked",state.showGov?"true":"false");
-    $("chartMeta").textContent = state.showGov ? "Conventional & Government · basis points vs anchor" : "Conventional · basis points vs anchor";
+    $("chartMeta").textContent=state.showGov?
+      "Conventional & Government · basis points since today's open":
+      "Conventional · basis points since today's open";
     renderChart();
   });
-  $("chartMeta").textContent="Conventional · basis points vs anchor";
 
-  // dropdown
   var dd=$("dd");
   $("ddBtn").addEventListener("click",function(e){e.stopPropagation();dd.classList.toggle("open");$("ddBtn").setAttribute("aria-expanded",dd.classList.contains("open"));});
   document.addEventListener("click",function(){dd.classList.remove("open");$("ddBtn").setAttribute("aria-expanded","false");});
 
-  // resize -> re-render chart (debounced)
+  $("benchTabs").addEventListener("click",function(e){
+    var btn=e.target.closest("button"); if(!btn||btn.disabled) return;
+    state.benchTab=btn.dataset.tab;
+    $("benchTabs").querySelectorAll("button").forEach(function(b){b.classList.toggle("active",b===btn);});
+    renderBenchmarks();
+  });
+
+  $("calTabs").addEventListener("click",function(e){
+    var btn=e.target.closest("button"); if(!btn||btn.disabled) return;
+    state.calTab=btn.dataset.tab;
+    $("calTabs").querySelectorAll("button").forEach(function(b){b.classList.toggle("active",b===btn);});
+    renderCalendar();
+  });
+
   var rt;
   window.addEventListener("resize",function(){clearTimeout(rt);rt=setTimeout(function(){if(state.points&&state.points.length)renderChart();},140);});
 
-  // go
   init();
 })();
 </script>
