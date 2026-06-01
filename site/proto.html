@@ -310,6 +310,8 @@ body{
 .mdi-pos{color:var(--better)}
 .mdi-neg{color:var(--worse)}
 .mdi-neu{color:var(--ink-4)}
+.mdi-row-pending .mdi-lbl{color:var(--ink-4)}
+.mdi-row-pending .mdi-cur{color:var(--ink-4)}
 
 /* ---------- economic calendar ---------- */
 .cal-table{width:100%;border-collapse:collapse}
@@ -511,9 +513,10 @@ body{
   "use strict";
 
   /* ---------------- config ---------------- */
-  var EP_CURRENT = "/.netlify/functions/getPublicLRI";
-  var EP_CHART   = "/.netlify/functions/getPublicLRIChart";
-  var EP_MARKET  = "/.netlify/functions/getMarketData";
+  var EP_CURRENT    = "/.netlify/functions/getPublicLRI";
+  var EP_CHART      = "/.netlify/functions/getPublicLRIChart";
+  var EP_MARKET     = "/.netlify/functions/getMarketData";
+  var EP_MARKET_IND = "/.netlify/functions/getPublicMarketIndicators";
   var IS_PROD = /lockiqrates\.com$/i.test(location.hostname);
 
   /* ---------------- helpers ---------------- */
@@ -643,6 +646,23 @@ body{
     _demo:true
   };
 
+  /* DEMO_INDICATORS mirrors getPublicMarketIndicators shape for local preview */
+  var DEMO_INDICATORS = {
+    ok:true,
+    updated_at:"2026-05-30T16:30:00Z",
+    indicators:[
+      {id:"us10y",         label:"US10Y Treasury Yield",     current:"4.432%",    today_change_bps:-4.1, bias:"Better",  updated:"2026-05-30T16:30:00Z", status:"LIVE"},
+      {id:"us30y",         label:"US30Y Treasury Yield",     current:"4.891%",    today_change_bps:-2.8, bias:"Better",  updated:"2026-05-30T16:30:00Z", status:"LIVE"},
+      {id:"zn",            label:"ZN Futures",               current:"108.453",   today_change_bps:0.1,  bias:"Better",  updated:"2026-05-30T16:30:00Z", status:"LIVE"},
+      {id:"mbb",           label:"MBB",                      current:"96.14",     today_change_bps:0.1,  bias:"Better",  updated:"2026-05-30T16:30:00Z", status:"LIVE"},
+      {id:"mbs_tsy_spread",label:"MBS–Treasury Spread",      current:null,        today_change_bps:0,    bias:"Neutral", updated:null,                   status:"PENDING"},
+      {id:"ps_spread",     label:"Primary–Secondary Spread",  current:null,        today_change_bps:0,    bias:"Neutral", updated:null,                   status:"PENDING"},
+      {id:"curve_2s10s",   label:"2s/10s Curve Spread",      current:null,        today_change_bps:0,    bias:"Neutral", updated:null,                   status:"PENDING"},
+      {id:"curve_10s30s",  label:"10s/30s Curve Spread",     current:"45.9 bps", today_change_bps:1.3,  bias:"Neutral", updated:"2026-05-30T16:30:00Z", status:"LIVE"}
+    ],
+    _demo:true
+  };
+
   function demoChart(date){
     var conv=[0,2.1,3.4,2.6,4.1,3.2,1.4,-0.8,-2.3,-1.1,0.6,1.8,0.9,-0.2,-0.6];
     var gov =[0,0.9,1.6,1.2,1.9,1.3,0.4,-0.6,-1.2,-0.7,0.1,0.7,0.3,-0.1,-0.2];
@@ -669,7 +689,8 @@ body{
   var state={
     current:null, chart:null, chartDate:null, overrideDate:null,
     showGov:false, xs:[], points:[],
-    market:null, benchTab:"standard", calTab:"today"
+    market:null, benchTab:"standard", calTab:"today",
+    indicators:null, indicatorsUpdatedAt:null
   };
 
   /* ===================================================================
@@ -993,6 +1014,11 @@ body{
       .then(function(r){if(!r.ok) throw 0; return r.json();})
       .catch(function(){return IS_PROD?null:DEMO_MARKET;});
   }
+  function loadMarketIndicators(){
+    return fetch(EP_MARKET_IND,{headers:{accept:"application/json"}})
+      .then(function(r){if(!r.ok) throw 0; return r.json();})
+      .catch(function(){return IS_PROD?null:DEMO_INDICATORS;});
+  }
 
   /* ===================================================================
      RENDER: rate benchmarks (Section 2)
@@ -1091,67 +1117,53 @@ body{
   }
 
   /* ===================================================================
-     RENDER: market direction indicators (compact table)
+     RENDER: market direction indicators — driven by getPublicMarketIndicators
   =================================================================== */
   function renderMDI(){
-    var sb=state.market&&state.market.shadow_bonds;
-    var mdiTs=fmtISOTime(state.market&&state.market.fetched_at);
+    var inds=state.indicators;
+    var mdiTs=fmtISOTime(state.indicatorsUpdatedAt);
     var mdiTsEl=$("mdiTs");
     if(mdiTsEl) mdiTsEl.textContent=mdiTs!=="—"?"as of "+mdiTs:"—";
 
-    var us10y   = sb&&sb.US10Y_Current!=null    ? Number(sb.US10Y_Current)        : null;
-    var us10yChg= sb&&sb.US10Y_Daily_Change!=null? Number(sb.US10Y_Daily_Change)  : null;
-    var us30y   = sb&&sb.US30Y_Current!=null    ? Number(sb.US30Y_Current)        : null;
-    var us30yChg= sb&&sb.US30Y_Daily_Change!=null? Number(sb.US30Y_Daily_Change)  : null;
-    var zn      = sb&&sb.ZN1_Current!=null      ? Number(sb.ZN1_Current)          : null;
-    var znChg   = sb&&sb.ZN1_Daily_Change!=null  ? Number(sb.ZN1_Daily_Change)    : null;
-    var mbb     = sb&&sb.MBB_Current!=null      ? Number(sb.MBB_Current)          : null;
-    var mbbChg  = sb&&sb.MBB_Daily_Change!=null  ? Number(sb.MBB_Daily_Change)    : null;
-    var sp1030  = us10y!=null&&us30y!=null ? Math.round((us30y-us10y)*1000)/10   : null;
-    var sp1030Chg= us10yChg!=null&&us30yChg!=null ? Math.round((us30yChg-us10yChg)*10000)/10 : null;
+    if(!inds||!inds.length){
+      $("mdiBody").innerHTML='<div class="mdi-row" style="color:var(--ink-4);font-family:var(--font-mono);font-size:12px">Market indicators unavailable.</div>';
+      return;
+    }
 
-    var liveTs=mdiTs!=="—"?mdiTs:"—";
+    // IDs whose change is already in bps; ZN and MBB use raw price points (no " bps" suffix)
+    var BPS_IDS={us10y:true,us30y:true,mbs_tsy_spread:true,ps_spread:true,curve_2s10s:true,curve_10s30s:true};
 
-    // [displayName, currentStr, chgVal, chgUnit, invertBias, isNeutral, rowTs]
-    // isNeutral=true: chg stays gray, bias always Neutral (spread rows pending real logic)
-    var ROWS=[
-      ["US10Y Treasury Yield",    us10y!=null?us10y.toFixed(3)+"%":"N/A",      us10yChg!=null?us10yChg*100:null, " bps", true,  false, liveTs],
-      ["US30Y Treasury Yield",    us30y!=null?us30y.toFixed(3)+"%":"N/A",      us30yChg!=null?us30yChg*100:null, " bps", true,  false, liveTs],
-      ["ZN Futures",              zn!=null?zn.toFixed(3):"N/A",                znChg,                            "",     false, false, liveTs],
-      ["MBB",                     mbb!=null?mbb.toFixed(2):"N/A",              mbbChg,                           "",     false, false, liveTs],
-      ["MBS–Treasury Spread",     "N/A",                                        null,                             " bps", false, true,  "—"],
-      ["Primary–Secondary Spread","N/A",                                        null,                             " bps", false, true,  "—"],
-      ["2s/10s Curve Spread",     "N/A",                                        null,                             " bps", false, true,  "—"],
-      ["10s/30s Curve Spread",    sp1030!=null?sp1030.toFixed(1)+" bps":"N/A", sp1030Chg,                        " bps", false, true,  sp1030!=null?liveTs:"—"]
-    ];
-
-    function biasCell(chgV,inv,neutral){
-      if(neutral) return '<span class="mdi-neu">Neutral</span>';
-      if(chgV==null||Math.abs(chgV)<0.05) return '<span class="mdi-neu">Neutral</span>';
-      var favorable=inv?(chgV<0):(chgV>0);
-      return favorable?'<span class="mdi-pos">Favorable</span>':'<span class="mdi-neg">Pressure</span>';
+    function biasBadge(bias){
+      if(bias==="Better") return '<span class="mdi-pos">Better</span>';
+      if(bias==="Worse")  return '<span class="mdi-neg">Worse</span>';
+      return '<span class="mdi-neu">Neutral</span>';
     }
 
     var html="";
-    ROWS.forEach(function(r){
-      var name=r[0],curStr=r[1],chgV=r[2],unit=r[3],inv=r[4],neutral=r[5],rowTs=r[6];
+    inds.forEach(function(ind){
+      var isPending=ind.status==="PENDING";
+      var cur=ind.current!=null?ind.current:"N/A";
+      var upd=ind.updated?fmtISOTime(ind.updated):"—";
+      var unit=BPS_IDS[ind.id]?" bps":"";
+
       var chgStr="0"+unit, chgColor="var(--ink-4)";
-      if(chgV!=null){
-        var rounded=Math.round(chgV*10)/10;
+      if(!isPending&&ind.today_change_bps!=null){
+        var rounded=Math.round(ind.today_change_bps*10)/10;
         if(Math.abs(rounded)>=0.05){
           chgStr=(rounded>0?"+":"")+rounded.toFixed(1)+unit;
-          if(!neutral) chgColor=(inv?(rounded<0):(rounded>0))?"var(--better)":"var(--worse)";
+          chgColor=ind.bias==="Better"?"var(--better)":ind.bias==="Worse"?"var(--worse)":"var(--ink-4)";
         }
       }
-      html+='<div class="mdi-row">'+
+
+      html+='<div class="mdi-row'+(isPending?" mdi-row-pending":"")+'">'+
         '<div class="mdi-top">'+
-          '<span class="mdi-lbl">'+name+'</span>'+
-          '<span class="mdi-cur">'+curStr+'</span>'+
+          '<span class="mdi-lbl">'+ind.label+'</span>'+
+          '<span class="mdi-cur">'+cur+'</span>'+
         '</div>'+
         '<div class="mdi-meta">'+
           '<span>Today&thinsp;<span style="color:'+chgColor+';font-weight:500">'+chgStr+'</span></span>'+
-          '<span>Bias&thinsp;'+biasCell(chgV,inv,neutral)+'</span>'+
-          '<span>Updated&thinsp;<span style="color:var(--ink-4)">'+rowTs+'</span></span>'+
+          '<span>Bias&thinsp;'+biasBadge(ind.bias)+'</span>'+
+          '<span>Updated&thinsp;<span style="color:var(--ink-4)">'+upd+'</span></span>'+
         '</div>'+
       '</div>';
     });
@@ -1223,6 +1235,9 @@ body{
     state.overrideDate=getParam("date");
 
     var marketPromise=loadMarket().then(function(mk){state.market=mk;});
+    var indicatorsPromise=loadMarketIndicators().then(function(d){
+      if(d&&d.ok){state.indicators=d.indicators||[];state.indicatorsUpdatedAt=d.updated_at||null;}
+    });
 
     var mainPromise=loadCurrent().then(function(c){
       state.current=c;
@@ -1248,7 +1263,7 @@ body{
       setChartError();
     });
 
-    Promise.all([mainPromise,marketPromise]).then(function(){
+    Promise.all([mainPromise,marketPromise,indicatorsPromise]).then(function(){
       renderBenchmarks();
       renderMDI();
       renderCalendar();
