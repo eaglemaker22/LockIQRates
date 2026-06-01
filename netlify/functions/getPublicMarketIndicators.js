@@ -12,8 +12,10 @@
 //   MBB_Current,   delta_MBB          (MBB ETF + change from today's open)
 //
 // Fields used from us30y_current:
-//   US30Y_Daily_Change                (scraper-computed; "N/A" when prior close missing)
-//   US30Y_Current, US30Y_PriorDayClose (fallback: compute change when Daily_Change is N/A)
+//   US30Y_Daily_Change    (scraper-computed current−prior_close; "N/A" when prior close missing)
+//   US30Y_Current         (fallback step 2: compute current−prior_close manually)
+//   US30Y_PriorDayClose   (fallback step 2)
+//   US30Y_Open            (fallback step 3: current−open, same methodology as US10Y's delta_10Y)
 
 const { initializeApp, cert, getApps } = require("firebase-admin/app");
 const { getFirestore } = require("firebase-admin/firestore");
@@ -102,19 +104,23 @@ exports.handler = async (event) => {
     // US10Y: change from today's open in bps
     const us10yBps = d10y !== null ? r1(d10y * 100) : null;
 
-    // US30Y: daily change (current − prior close), yield % pts → bps
-    // Two-step: (1) scraper-computed Daily_Change; (2) compute from Current − PriorDayClose.
-    // Daily_Change is stored as "N/A" (string) when prior close is missing → n() → null.
+    // US30Y: yield change in bps — three-step fallback, most reliable to least.
+    // (1) Scraper-computed Daily_Change (current−prior_close); "N/A" string when prior missing.
+    // (2) Compute current−prior_close manually from the two raw fields.
+    // (3) Compute current−open (same methodology as US10Y's delta_10Y from shadow_bonds).
+    // Step 3 only fires when prior close was never populated — Open is written daily after 5am.
     let us30yBps = null;
+    const us30yCurDoc   = n(us30yDoc.US30Y_Current);
+    const us30yPriorDoc = n(us30yDoc.US30Y_PriorDayClose);
+    const us30yOpenDoc  = n(us30yDoc.US30Y_Open);
+
     const us30yDailyChg = n(us30yDoc.US30Y_Daily_Change);
     if (us30yDailyChg !== null) {
       us30yBps = r1(us30yDailyChg * 100);
-    } else {
-      const us30yCurDoc   = n(us30yDoc.US30Y_Current);
-      const us30yPriorDoc = n(us30yDoc.US30Y_PriorDayClose);
-      if (us30yCurDoc !== null && us30yPriorDoc !== null && us30yPriorDoc > 0) {
-        us30yBps = r1((us30yCurDoc - us30yPriorDoc) * 100);
-      }
+    } else if (us30yCurDoc !== null && us30yPriorDoc !== null && us30yPriorDoc > 0) {
+      us30yBps = r1((us30yCurDoc - us30yPriorDoc) * 100);
+    } else if (us30yCurDoc !== null && us30yOpenDoc !== null && us30yOpenDoc > 0) {
+      us30yBps = r1((us30yCurDoc - us30yOpenDoc) * 100);
     }
 
     // ZN: price-point change from today's open
