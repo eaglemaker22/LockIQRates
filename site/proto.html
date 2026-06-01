@@ -1388,12 +1388,14 @@ body{
       state.chartDate=cd;
       if(state.overrideDate) showOverride(state.overrideDate);
 
-      return loadChart(cd);
-    }).then(function(ch){
-      if(!ch) return;
-      state.chart=ch;
-      state.points=(ch.points||[]).slice().sort(function(a,b){return String(a.timestamp).localeCompare(String(b.timestamp));});
-      renderChart();
+      return loadChart(cd).then(function(ch){
+        if(!ch) return;
+        state.chart=ch;
+        state.points=(ch.points||[]).slice().sort(function(a,b){return String(a.timestamp).localeCompare(String(b.timestamp));});
+        renderChart();
+      }).catch(function(){
+        setChartError();
+      });
     }).catch(function(){
       renderCardsError();
       renderStrip({});
