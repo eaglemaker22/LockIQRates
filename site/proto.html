@@ -816,8 +816,12 @@ body{
     var el=$("lriStats");
     if(!el) return;
 
-    var pc  = c?c.prev_close_conv_bps:null;
-    var pcDt= c?c.prev_close_date:null;
+    // Prev Close — explicit numeric extraction, no truthiness on the value
+    var prevCloseRaw = c ? c.prev_close_conv_bps : undefined;
+    var prevCloseVal = Number(prevCloseRaw);
+    var hasPrevClose = Number.isFinite(prevCloseVal) && prevCloseRaw !== null && prevCloseRaw !== undefined;
+    console.log("Prev Close raw", c ? c.prev_close_conv_bps : "c falsy", c ? c.prev_close_date : null);
+
     var cur = c?c.conv_lri_bps:null;
     var hi  = c?c.conv_lri_high_bps:null;
     var hiT = c?c.conv_lri_high_time:null;
@@ -848,8 +852,14 @@ body{
       '</div>';
     }
 
+    var pcStr   = hasPrevClose ? (prevCloseVal.toFixed(1)+' bps') : '—';
+    var pcColor = hasPrevClose
+      ? (prevCloseVal > 0.05 ? 'var(--better)' : prevCloseVal < -0.05 ? 'var(--worse)' : 'var(--ink-4)')
+      : 'var(--ink-4)';
+    var pcSub   = fmtPrevDate(c ? c.prev_close_date : null);
+
     el.innerHTML=
-      cell('Prev Close', bpsStr(pc),  valColor(pc),  fmtPrevDate(pcDt))+
+      cell('Prev Close', pcStr,       pcColor,       pcSub)+
       cell('Current',    bpsStr(cur), valColor(cur), "since Today's Open")+
       cell('Today High', bpsStr(hi),  hi!==null&&hi!==undefined?'var(--better)':'var(--ink-4)', hiT?'set '+shortTime(hiT):'—')+
       cell('Today Low',  bpsStr(lo),  lo!==null&&lo!==undefined?'var(--worse)' :'var(--ink-4)', loT?'set '+shortTime(loT):'—');
