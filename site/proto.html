@@ -623,8 +623,8 @@ body{
     anchor_status:"GOOD", gov_lri_bps:-0.2, trading_date:"2026-05-30",
     anchor_time:"07:15:00", conv_direction:"FLAT", gov_dollars_per_100k:-2,
     confidence:"OK_WITH_WARNINGS",
-    intraday_high_conv_bps:4.6,  intraday_high_conv_time:"2026-05-30 08:34:00",
-    intraday_low_conv_bps:-28.3, intraday_low_conv_time:"2026-05-30 06:00:00",
+    conv_lri_high_bps:4.6,  conv_lri_high_time:"2026-05-30 08:34:00",
+    conv_lri_low_bps:-28.3, conv_lri_low_time:"2026-05-30 06:00:00",
     _demo:true
   };
   var DEMO_MARKET = {
@@ -815,10 +815,10 @@ body{
     if(!el) return;
 
     var cur=c?c.conv_lri_bps:null;
-    var hi =c?c.intraday_high_conv_bps:null;
-    var hiT=c?c.intraday_high_conv_time:null;
-    var lo =c?c.intraday_low_conv_bps:null;
-    var loT=c?c.intraday_low_conv_time:null;
+    var hi =c?c.conv_lri_high_bps:null;
+    var hiT=c?c.conv_lri_high_time:null;
+    var lo =c?c.conv_lri_low_bps:null;
+    var loT=c?c.conv_lri_low_time:null;
 
     var curColor=(cur===null||cur===undefined||Math.abs(cur)<0.05)
       ?"var(--ink-4)":(cur>0?"var(--better)":"var(--worse)");
