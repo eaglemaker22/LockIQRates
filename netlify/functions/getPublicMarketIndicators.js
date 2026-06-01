@@ -1,15 +1,18 @@
 // getPublicMarketIndicators.js
 // Public-safe market direction indicators for the LockIQ dashboard.
-// Reads only market_data/shadow_bonds. Does NOT expose raw MBS coupon
-// data, UMBS/GNMA prices, or any MBS input fields.
+// Reads market_data/shadow_bonds (primary) and market_data/us30y_current
+// (for US30Y daily change). Does NOT expose raw MBS coupon data,
+// UMBS/GNMA prices, or any MBS input fields.
 //
 // Fields used from shadow_bonds:
-//   US10Y_Current, US10Y_Open, delta_10Y   (10Y yield + change from open)
-//   US30Y_Current                           (30Y yield; no open/delta available)
-//   US2Y_Current,  US2Y_Open,  delta_2Y    (2Y yield + change from open)
-//   ZN1_Current,   ZN1_Open,   delta_ZN    (10Y futures + change from open)
-//   MBB_Current,   MBB_Open,   delta_MBB   (MBB ETF + change from open)
-//   last_updated
+//   US10Y_Current, delta_10Y          (10Y yield + change from today's open)
+//   US30Y_Current                     (30Y yield; open/delta from us30y_current)
+//   US2Y_Current,  delta_2Y           (2Y yield + change from today's open)
+//   ZN1_Current,   delta_ZN           (10Y futures + change from today's open)
+//   MBB_Current,   delta_MBB          (MBB ETF + change from today's open)
+//
+// Fields used from us30y_current:
+//   US30Y_Daily_Change                (current − prior_day_close, in yield % pts)
 
 const { initializeApp, cert, getApps } = require("firebase-admin/app");
 const { getFirestore } = require("firebase-admin/firestore");
@@ -63,9 +66,14 @@ exports.handler = async (event) => {
 
   try {
     const db = getDb();
-    const snap = await db.collection("market_data").doc("shadow_bonds").get();
 
-    if (!snap.exists) {
+    // Parallel reads — shadow_bonds for most instruments, us30y_current for 30Y daily change
+    const [sbSnap, us30ySnap] = await Promise.all([
+      db.collection("market_data").doc("shadow_bonds").get(),
+      db.collection("market_data").doc("us30y_current").get(),
+    ]);
+
+    if (!sbSnap.exists) {
       return {
         statusCode: 503,
         headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
@@ -73,41 +81,38 @@ exports.handler = async (event) => {
       };
     }
 
-    const sb = snap.data();
+    const sb      = sbSnap.data();
+    const us30yDoc = us30ySnap.exists ? us30ySnap.data() : {};
     const fetchedAt = new Date().toISOString();
 
-    // Current prices / yields
+    // Current prices / yields (from shadow_bonds)
     const us10y = n(sb.US10Y_Current);
     const us30y = n(sb.US30Y_Current);
     const us2y  = n(sb.US2Y_Current);
     const zn    = n(sb.ZN1_Current);
     const mbb   = n(sb.MBB_Current);
 
-    // Scraper-computed deltas from today's open (null if market hasn't opened yet)
-    const d10y  = n(sb.delta_10Y);   // yield % points  (multiply × 100 → bps)
+    // Scraper-computed deltas from today's open (null until market opens)
+    const d10y  = n(sb.delta_10Y);   // yield % points → ×100 = bps
     const d2y   = n(sb.delta_2Y);    // yield % points
     const dZN   = n(sb.delta_ZN);    // price points (decimal)
     const dMBB  = n(sb.delta_MBB);   // price points
 
-    // US10Y bps change from today's open
+    // US10Y: change from today's open in bps
     const us10yBps = d10y !== null ? r1(d10y * 100) : null;
 
-    // ZN: price-point change from open
+    // US30Y: daily change (current − prior close) from us30y_current
+    // Stored as yield % points; "N/A" when prior close unavailable → n() → null
+    const us30yChg = n(us30yDoc.US30Y_Daily_Change);
+    const us30yBps = us30yChg !== null ? r1(us30yChg * 100) : null;
+
+    // ZN: price-point change from today's open
     const znChg = dZN !== null ? r2(dZN) : null;
 
-    // MBB: prefer % change (delta / open × 100); fall back to pts if open missing
-    const mbbOpen = n(sb.MBB_Open);
-    let mbbChangeValue = null;
-    let mbbChangeUnit  = null;
-    if (dMBB !== null && mbbOpen !== null && mbbOpen !== 0) {
-      mbbChangeValue = r2((dMBB / mbbOpen) * 100);
-      mbbChangeUnit  = "%";
-    } else if (dMBB !== null) {
-      mbbChangeValue = r2(dMBB);
-      mbbChangeUnit  = "pts";
-    }
+    // MBB: price-point change from open expressed as bps (1 pt = 100 bps of price)
+    const mbbBps = dMBB !== null ? r1(dMBB * 100) : null;
 
-    // 2s/10s curve spread — US2Y data available via shadow_bonds
+    // 2s/10s curve spread — both US2Y and US10Y available via shadow_bonds
     const sp2s10s    = (us2y !== null && us10y !== null)
       ? r1((us10y - us2y) * 100) : null;
     const sp2s10sChg = (d10y !== null && d2y !== null)
@@ -118,7 +123,7 @@ exports.handler = async (event) => {
       ? r1((us30y - us10y) * 100) : null;
 
     const indicators = [
-      // US10Y: change from open via delta_10Y
+      // US10Y: change from today's open via delta_10Y
       row("us10y", "US10Y Treasury Yield",
         us10y !== null ? us10y.toFixed(3) + "%" : null,
         us10yBps,
@@ -128,17 +133,17 @@ exports.handler = async (event) => {
         us10y !== null ? fetchedAt : null,
         us10y !== null ? "LIVE" : "UNAVAILABLE"),
 
-      // US30Y: current live; no delta_30Y field so change is not calculable
+      // US30Y: daily change (vs prior close) from us30y_current
       row("us30y", "US30Y Treasury Yield",
         us30y !== null ? us30y.toFixed(3) + "%" : null,
+        us30yBps,
         null,
-        null,
-        null,
-        "Neutral",
+        us30yBps !== null ? "bps" : null,
+        calcBias(us30yBps, true),
         us30y !== null ? fetchedAt : null,
         us30y !== null ? "LIVE" : "UNAVAILABLE"),
 
-      // 10Y Futures (ZN): change from open via delta_ZN
+      // 10Y Futures (ZN): price-point change from today's open
       row("zn", "10Y Futures",
         zn !== null ? zn.toFixed(3) : null,
         null,
@@ -148,12 +153,12 @@ exports.handler = async (event) => {
         zn !== null ? fetchedAt : null,
         zn !== null ? "LIVE" : "UNAVAILABLE"),
 
-      // Mortgage Bond Momentum (MBB): % change from open when possible
+      // Mortgage Bond Momentum (MBB): change from open in bps (1 price pt = 100 bps)
       row("mbb", "Mortgage Bond Momentum",
         mbb !== null ? mbb.toFixed(2) : null,
         null,
-        mbbChangeValue,
-        mbbChangeUnit,
+        mbbBps,
+        mbbBps !== null ? "bps" : null,
         calcBias(dMBB, false),
         mbb !== null ? fetchedAt : null,
         mbb !== null ? "LIVE" : "UNAVAILABLE"),
@@ -162,7 +167,7 @@ exports.handler = async (event) => {
       row("mbs_tsy_spread", "MBS–Treasury Spread",      null, null, null, null, "Neutral", null, "PENDING"),
       row("ps_spread",       "Primary–Secondary Spread", null, null, null, null, "Neutral", null, "PENDING"),
 
-      // 2s/10s — both US10Y and US2Y data are available via shadow_bonds
+      // 2s/10s — both US10Y and US2Y data available via shadow_bonds
       row("curve_2s10s", "2s/10s Curve Spread",
         sp2s10s !== null ? sp2s10s.toFixed(1) + " bps" : null,
         sp2s10sChg,
