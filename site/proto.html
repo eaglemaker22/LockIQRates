@@ -313,6 +313,7 @@ body{
 .mdi-pos{color:var(--better)}
 .mdi-neg{color:var(--worse)}
 .mdi-neu{color:var(--ink-4)}
+.mdi-upd{text-align:right;font-size:10px;color:var(--ink-4);white-space:nowrap}
 
 /* ---------- economic calendar ---------- */
 .cal-table{width:100%;border-collapse:collapse}
@@ -464,7 +465,7 @@ body{
     <div class="mdi-hd">
       <div class="mdi-left">
         <span class="mdi-title">Market Direction Indicators</span>
-        <span class="mdi-sub">Key mortgage market drivers</span>
+        <span class="mdi-sub">Key mortgage market drivers behind rate-pricing direction.</span>
       </div>
       <span class="mdi-ts" id="mdiTs">—</span>
     </div>
@@ -472,8 +473,9 @@ body{
       <thead><tr>
         <th>Indicator</th>
         <th style="text-align:right">Current</th>
-        <th style="text-align:right">Chg</th>
+        <th style="text-align:right">Today</th>
         <th style="text-align:right">Bias</th>
+        <th style="text-align:right">Updated</th>
       </tr></thead>
       <tbody id="mdiBody"><!-- injected --></tbody>
     </table>
@@ -1121,19 +1123,23 @@ body{
     var sp1030  = us10y!=null&&us30y!=null ? Math.round((us30y-us10y)*1000)/10   : null;
     var sp1030Chg= us10yChg!=null&&us30yChg!=null ? Math.round((us30yChg-us10yChg)*10000)/10 : null;
 
-    // [displayName, currentStr, chgVal, chgUnit(" bps" or ""), invertBias]
+    var liveTs=mdiTs!=="—"?mdiTs:"—";
+
+    // [displayName, currentStr, chgVal, chgUnit, invertBias, isNeutral, rowTs]
+    // isNeutral=true: chg stays gray, bias always Neutral (spread rows pending real logic)
     var ROWS=[
-      ["MBS–Treasury Spread",        "N/A",                                   null,                               " bps", false],
-      ["Primary–Secondary Spread",   "N/A",                                   null,                               " bps", false],
-      ["US 10-Year Treasury Yield",  us10y!=null?us10y.toFixed(3)+"%":"N/A",  us10yChg!=null?us10yChg*100:null,   " bps", true ],
-      ["US 30-Year Treasury Yield",  us30y!=null?us30y.toFixed(3)+"%":"N/A",  us30yChg!=null?us30yChg*100:null,   " bps", true ],
-      ["ZN Futures (10-Year)",       zn!=null?zn.toFixed(3):"N/A",            znChg,                              "",     false],
-      ["MBB (Mortgage Bond)",        mbb!=null?mbb.toFixed(2):"N/A",          mbbChg,                             "",     false],
-      ["2s/10s Yield Curve Spread",  "N/A",                                   null,                               " bps", false],
-      ["10s/30s Yield Curve Spread", sp1030!=null?sp1030.toFixed(1)+" bps":"N/A", sp1030Chg,                     " bps", false]
+      ["US 10-Year Treasury Yield",          us10y!=null?us10y.toFixed(3)+"%":"N/A",         us10yChg!=null?us10yChg*100:null, " bps", true,  false, liveTs],
+      ["US 30-Year Treasury Yield",          us30y!=null?us30y.toFixed(3)+"%":"N/A",         us30yChg!=null?us30yChg*100:null, " bps", true,  false, liveTs],
+      ["ZN Futures (10-Year Futures)",       zn!=null?zn.toFixed(3):"N/A",                  znChg,                            "",     false, false, liveTs],
+      ["MBB (Mortgage Bond Early Indicator)",mbb!=null?mbb.toFixed(2):"N/A",                mbbChg,                           "",     false, false, liveTs],
+      ["MBS–Treasury Spread",                "N/A",                                          null,                             " bps", false, true,  "—"],
+      ["Primary–Secondary Spread",           "N/A",                                          null,                             " bps", false, true,  "—"],
+      ["2s/10s Yield Curve Spread",          "N/A",                                          null,                             " bps", false, true,  "—"],
+      ["10s/30s Yield Curve Spread",         sp1030!=null?sp1030.toFixed(1)+" bps":"N/A",    sp1030Chg,                        " bps", false, true,  sp1030!=null?liveTs:"—"]
     ];
 
-    function biasCell(chgV,inv){
+    function biasCell(chgV,inv,neutral){
+      if(neutral) return '<span class="mdi-neu">Neutral</span>';
       if(chgV==null||Math.abs(chgV)<0.05) return '<span class="mdi-neu">Neutral</span>';
       var favorable=inv?(chgV<0):(chgV>0);
       return favorable?'<span class="mdi-pos">Favorable</span>':'<span class="mdi-neg">Pressure</span>';
@@ -1141,20 +1147,21 @@ body{
 
     var html="";
     ROWS.forEach(function(r){
-      var name=r[0],curStr=r[1],chgV=r[2],unit=r[3],inv=r[4];
+      var name=r[0],curStr=r[1],chgV=r[2],unit=r[3],inv=r[4],neutral=r[5],rowTs=r[6];
       var chgStr="0"+unit, chgColor="var(--ink-4)";
       if(chgV!=null){
         var rounded=Math.round(chgV*10)/10;
         if(Math.abs(rounded)>=0.05){
           chgStr=(rounded>0?"+":"")+rounded.toFixed(1)+unit;
-          chgColor=(inv?(rounded<0):(rounded>0))?"var(--better)":"var(--worse)";
+          if(!neutral) chgColor=(inv?(rounded<0):(rounded>0))?"var(--better)":"var(--worse)";
         }
       }
       html+='<tr>'+
         '<td class="mdi-name">'+name+'</td>'+
         '<td class="mdi-val">'+curStr+'</td>'+
         '<td class="mdi-chg" style="color:'+chgColor+'">'+chgStr+'</td>'+
-        '<td class="mdi-bias">'+biasCell(chgV,inv)+'</td>'+
+        '<td class="mdi-bias">'+biasCell(chgV,inv,neutral)+'</td>'+
+        '<td class="mdi-upd">'+rowTs+'</td>'+
       '</tr>';
     });
 
