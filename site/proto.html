@@ -667,14 +667,14 @@ body{
     ok:true,
     updated_at:"2026-05-30T16:30:00Z",
     indicators:[
-      {id:"us10y",         label:"US10Y Treasury Yield",     current:"4.432%",    today_change_bps:-4.1, bias:"Better",  updated:"2026-05-30T16:30:00Z", status:"LIVE"},
-      {id:"us30y",         label:"US30Y Treasury Yield",     current:"4.891%",    today_change_bps:-2.8, bias:"Better",  updated:"2026-05-30T16:30:00Z", status:"LIVE"},
-      {id:"zn",            label:"ZN Futures",               current:"108.453",   today_change_bps:0.1,  bias:"Better",  updated:"2026-05-30T16:30:00Z", status:"LIVE"},
-      {id:"mbb",           label:"MBB",                      current:"96.14",     today_change_bps:0.1,  bias:"Better",  updated:"2026-05-30T16:30:00Z", status:"LIVE"},
-      {id:"mbs_tsy_spread",label:"MBS–Treasury Spread",      current:null,        today_change_bps:0,    bias:"Neutral", updated:null,                   status:"PENDING"},
-      {id:"ps_spread",     label:"Primary–Secondary Spread",  current:null,        today_change_bps:0,    bias:"Neutral", updated:null,                   status:"PENDING"},
-      {id:"curve_2s10s",   label:"2s/10s Curve Spread",      current:null,        today_change_bps:0,    bias:"Neutral", updated:null,                   status:"PENDING"},
-      {id:"curve_10s30s",  label:"10s/30s Curve Spread",     current:"45.9 bps", today_change_bps:1.3,  bias:"Neutral", updated:"2026-05-30T16:30:00Z", status:"LIVE"}
+      {id:"us10y",         label:"US10Y Treasury Yield",     current:"4.432%",   today_change_bps:-4.1, today_change_value:null, today_change_unit:"bps", bias:"Better",  updated:"2026-05-30T16:30:00Z", status:"LIVE"},
+      {id:"us30y",         label:"US30Y Treasury Yield",     current:"4.891%",   today_change_bps:null, today_change_value:null, today_change_unit:null,  bias:"Neutral", updated:"2026-05-30T16:30:00Z", status:"LIVE"},
+      {id:"zn",            label:"10Y Futures",              current:"108.453",  today_change_bps:null, today_change_value:0.125,today_change_unit:"pts", bias:"Better",  updated:"2026-05-30T16:30:00Z", status:"LIVE"},
+      {id:"mbb",           label:"Mortgage Bond Momentum",   current:"96.14",    today_change_bps:null, today_change_value:0.09, today_change_unit:"%",   bias:"Better",  updated:"2026-05-30T16:30:00Z", status:"LIVE"},
+      {id:"mbs_tsy_spread",label:"MBS–Treasury Spread",      current:null,       today_change_bps:null, today_change_value:null, today_change_unit:null,  bias:"Neutral", updated:null,                   status:"PENDING"},
+      {id:"ps_spread",     label:"Primary–Secondary Spread", current:null,       today_change_bps:null, today_change_value:null, today_change_unit:null,  bias:"Neutral", updated:null,                   status:"PENDING"},
+      {id:"curve_2s10s",   label:"2s/10s Curve Spread",      current:"35.2 bps",today_change_bps:-1.4, today_change_value:null, today_change_unit:"bps", bias:"Neutral", updated:"2026-05-30T16:30:00Z", status:"LIVE"},
+      {id:"curve_10s30s",  label:"10s/30s Curve Spread",     current:"45.9 bps",today_change_bps:null, today_change_value:null, today_change_unit:null,  bias:"Neutral", updated:"2026-05-30T16:30:00Z", status:"LIVE"}
     ],
     _demo:true
   };
@@ -1224,77 +1224,95 @@ body{
       var isPending=ind.status==="PENDING";
       var bias=ind.bias||"Neutral";
       var upd=ind.updated?fmtISOTime(ind.updated):"—";
-      var chg=ind.today_change_bps;
+      var chgBps=ind.today_change_bps;     // null when not available
+      var chgVal=ind.today_change_value;   // null when not available
+      var chgUnit=ind.today_change_unit;   // "bps", "pts", "%" or null
       var cur=ind.current;
       var biasColor=bias==="Better"?"var(--better)":bias==="Worse"?"var(--worse)":"var(--ink-4)";
 
       var heroStr,heroColor,metaHtml;
 
       if(ind.id==="us10y"||ind.id==="us30y"){
-        // Hero = today's bps change
-        var bps=chg!=null?r1(chg):null;
-        if(bps!=null&&Math.abs(bps)>=0.05){
-          heroStr=(bps>0?"+":"")+bps.toFixed(1)+" bps today";
-          heroColor=biasColor;
+        // Hero = today's bps change from open; null → "Change pending"
+        if(chgBps!==null&&chgBps!==undefined){
+          var bps=r1(chgBps);
+          if(Math.abs(bps)>=0.05){
+            heroStr=(bps>0?"+":"")+bps.toFixed(1)+" bps today";
+            heroColor=biasColor;
+          } else {
+            heroStr="0 bps today"; heroColor="var(--ink-4)";
+          }
         } else {
-          heroStr="0 bps today"; heroColor="var(--ink-4)";
+          heroStr="Change pending"; heroColor="var(--ink-4)";
         }
         metaHtml=(cur?'<span style="color:var(--ink-2)">'+cur+'</span>'+sep():"")
           +biasBadge(bias)+sep()+updSpan(upd);
       }
 
       else if(ind.id==="zn"){
-        // Hero = futures price change in pts
-        var pts=chg!=null?r2(chg):null;
-        if(pts!=null&&Math.abs(pts)>=0.005){
-          heroStr=(pts>0?"+":"")+pts.toFixed(2)+" pts today";
-          heroColor=biasColor;
+        // Hero = futures change in pts; null → "Change pending"
+        if(chgVal!==null&&chgVal!==undefined){
+          var pts=r2(chgVal);
+          if(Math.abs(pts)>=0.005){
+            heroStr=(pts>0?"+":"")+pts.toFixed(2)+" pts today";
+            heroColor=biasColor;
+          } else {
+            heroStr="0 pts today"; heroColor="var(--ink-4)";
+          }
         } else {
-          heroStr="0 pts today"; heroColor="var(--ink-4)";
+          heroStr="Change pending"; heroColor="var(--ink-4)";
         }
-        metaHtml=biasBadge(bias)+sep()+updSpan(upd);
+        metaHtml=(cur?'<span style="color:var(--ink-2)">'+cur+'</span>'+sep():"")+biasBadge(bias)+sep()+updSpan(upd);
       }
 
       else if(ind.id==="mbb"){
-        // Hero = % change (derived from price change / current price)
-        var curPrice=cur?parseFloat(cur):null;
-        if(chg!=null&&curPrice&&curPrice>0){
-          var pct=r2(chg/curPrice*100);
-          if(Math.abs(pct)>=0.005){
-            heroStr=(pct>0?"+":"")+pct.toFixed(2)+"% today";
+        // Hero = % or pts change from open; null → "Change pending"
+        if(chgVal!==null&&chgVal!==undefined&&chgUnit){
+          var absV=Math.abs(chgVal);
+          if(absV>=0.005){
+            heroStr=(chgVal>0?"+":"")+r2(chgVal).toFixed(2)+chgUnit+" today";
             heroColor=biasColor;
           } else {
-            heroStr="0% today"; heroColor="var(--ink-4)";
+            heroStr="0"+chgUnit+" today"; heroColor="var(--ink-4)";
           }
-        } else if(chg!=null&&Math.abs(r2(chg))>=0.005){
-          heroStr=(chg>0?"+":"")+r2(chg).toFixed(2)+" pts today";
-          heroColor=biasColor;
         } else {
-          heroStr="0% today"; heroColor="var(--ink-4)";
+          heroStr="Change pending"; heroColor="var(--ink-4)";
         }
-        metaHtml=biasBadge(bias)+sep()+updSpan(upd);
+        metaHtml=(cur?'<span style="color:var(--ink-2)">'+cur+'</span>'+sep():"")+biasBadge(bias)+sep()+updSpan(upd);
       }
 
       else if(ind.id==="curve_10s30s"){
-        // Hero = current spread value; secondary shows today's change
+        // Hero = current spread value; meta = today change or "Today change pending"
         heroStr=cur!=null?cur:"N/A";
         heroColor=cur!=null?"var(--ink)":"var(--ink-4)";
-        var chgBps=chg!=null?r1(chg):null;
-        var chgLabel=(chgBps!=null&&Math.abs(chgBps)>=0.05)
-          ?((chgBps>0?"+":"")+chgBps.toFixed(1)+" bps"):"0 bps";
-        metaHtml='<span>Today <span style="color:var(--ink-2)">'+chgLabel+'</span></span>'
-          +sep()+biasBadge(bias)+sep()+updSpan(upd);
+        if(chgBps!==null&&chgBps!==undefined){
+          var spChg=r1(chgBps);
+          var spLabel=Math.abs(spChg)>=0.05?((spChg>0?"+":"")+spChg.toFixed(1)+" bps"):"0 bps";
+          metaHtml='<span>Today <span style="color:var(--ink-2)">'+spLabel+'</span></span>'
+            +sep()+biasBadge(bias)+sep()+updSpan(upd);
+        } else {
+          metaHtml='<span style="color:var(--ink-4)">Today change pending</span>'
+            +sep()+biasBadge(bias)+sep()+updSpan(upd);
+        }
       }
 
       else if(ind.id==="curve_2s10s"){
-        // US2Y not available — fully pending
-        heroStr="N/A"; heroColor="var(--ink-4)";
-        metaHtml='<span class="mdi-neu">Pending</span>'+sep()+updSpan("—");
+        if(ind.status==="LIVE"&&cur!=null){
+          heroStr=cur; heroColor="var(--ink)";
+          var c2chg=chgBps!==null&&chgBps!==undefined?r1(chgBps):null;
+          var c2label=c2chg!==null?(Math.abs(c2chg)>=0.05?(c2chg>0?"+":"")+c2chg.toFixed(1)+" bps":"0 bps"):"Today change pending";
+          var c2color=c2chg!==null&&Math.abs(c2chg)>=0.05?"var(--ink-2)":"var(--ink-4)";
+          metaHtml='<span>Today <span style="color:'+c2color+'">'+c2label+'</span></span>'
+            +sep()+biasBadge(bias)+sep()+updSpan(upd);
+        } else {
+          heroStr="Pending"; heroColor="var(--ink-4)";
+          metaHtml='<span style="color:var(--ink-4)">Coming soon</span>'+sep()+updSpan("—");
+        }
       }
 
       else if(isPending){
-        // MBS-Tsy, P-S: placeholder change of 0
-        heroStr="0 bps today"; heroColor="var(--ink-4)";
+        // MBS-Tsy, PS: genuinely no data yet
+        heroStr="Coming soon"; heroColor="var(--ink-4)";
         metaHtml=biasBadge(bias)+sep()+updSpan("—");
       }
 
