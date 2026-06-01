@@ -820,8 +820,6 @@ body{
     var prevCloseRaw = c ? c.prev_close_conv_bps : undefined;
     var prevCloseVal = Number(prevCloseRaw);
     var hasPrevClose = Number.isFinite(prevCloseVal) && prevCloseRaw !== null && prevCloseRaw !== undefined;
-    console.log("Prev Close raw", c ? c.prev_close_conv_bps : "c falsy", c ? c.prev_close_date : null);
-
     var cur = c?c.conv_lri_bps:null;
     var hi  = c?c.conv_lri_high_bps:null;
     var hiT = c?c.conv_lri_high_time:null;
