@@ -247,7 +247,7 @@ body{
 .q-dot{width:7px;height:7px;border-radius:50%;flex:none}
 
 /* ---------- lri intraday stats strip ---------- */
-.lri-stats-strip{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin:10px -20px 16px}
+.lri-stats-strip{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin:10px -20px 16px}
 .lri-stat-cell{padding:10px 20px;border-right:1px solid var(--line)}
 .lri-stat-cell:last-child{border-right:0}
 .lri-stat-lbl{font-family:var(--font-mono);font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-4);margin-bottom:5px}
@@ -623,6 +623,8 @@ body{
     anchor_status:"GOOD", gov_lri_bps:-0.2, trading_date:"2026-05-30",
     anchor_time:"07:15:00", conv_direction:"FLAT", gov_dollars_per_100k:-2,
     confidence:"OK_WITH_WARNINGS",
+    prev_close_conv_bps:-28.4, prev_close_date:"2026-05-29",
+    prev_close_label:"Yesterday's Close", prev_close_status:"OK",
     conv_lri_high_bps:4.6,  conv_lri_high_time:"2026-05-30 08:34:00",
     conv_lri_low_bps:-28.3, conv_lri_low_time:"2026-05-30 06:00:00",
     _demo:true
@@ -808,20 +810,35 @@ body{
   }
 
   /* ===================================================================
-     RENDER: LRI intraday stats strip (CURRENT / TODAY HIGH / TODAY LOW)
+     RENDER: LRI intraday stats strip (PREV CLOSE / CURRENT / TODAY HIGH / TODAY LOW)
   =================================================================== */
   function renderLRIStats(c){
     var el=$("lriStats");
     if(!el) return;
 
-    var cur=c?c.conv_lri_bps:null;
-    var hi =c?c.conv_lri_high_bps:null;
-    var hiT=c?c.conv_lri_high_time:null;
-    var lo =c?c.conv_lri_low_bps:null;
-    var loT=c?c.conv_lri_low_time:null;
+    var pc  = c?c.prev_close_conv_bps:null;
+    var pcDt= c?c.prev_close_date:null;
+    var cur = c?c.conv_lri_bps:null;
+    var hi  = c?c.conv_lri_high_bps:null;
+    var hiT = c?c.conv_lri_high_time:null;
+    var lo  = c?c.conv_lri_low_bps:null;
+    var loT = c?c.conv_lri_low_time:null;
 
-    var curColor=(cur===null||cur===undefined||Math.abs(cur)<0.05)
-      ?"var(--ink-4)":(cur>0?"var(--better)":"var(--worse)");
+    function valColor(v){
+      return (v===null||v===undefined||Math.abs(v)<0.05)?"var(--ink-4)":(v>0?"var(--better)":"var(--worse)");
+    }
+    function bpsStr(v){return v!==null&&v!==undefined?fmtBps(v)+' bps':'—';}
+
+    function fmtPrevDate(dateStr){
+      if(!dateStr) return '—';
+      try{
+        var p=dateStr.split('-');
+        var d=new Date(parseInt(p[0]),parseInt(p[1])-1,parseInt(p[2]));
+        var days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+        var mons=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        return 'vs '+days[d.getDay()]+' '+mons[d.getMonth()]+' '+d.getDate();
+      }catch(e){return '—';}
+    }
 
     function cell(lbl,valStr,valColor,subStr){
       return '<div class="lri-stat-cell">'+
@@ -831,17 +848,11 @@ body{
       '</div>';
     }
 
-    var curStr=cur!==null&&cur!==undefined?fmtBps(cur)+' bps':'—';
-    var hiStr =hi!==null&&hi!==undefined?fmtBps(hi)+' bps':'—';
-    var loStr =lo!==null&&lo!==undefined?fmtBps(lo)+' bps':'—';
-
-    var hiSub=hiT?'set '+shortTime(hiT):'—';
-    var loSub=loT?'set '+shortTime(loT):'—';
-
     el.innerHTML=
-      cell('Current',   curStr, curColor,          "since Today's Open")+
-      cell('Today High',hiStr,  hi!==null&&hi!==undefined?'var(--better)':'var(--ink-4)', hiSub)+
-      cell('Today Low', loStr,  lo!==null&&lo!==undefined?'var(--worse)' :'var(--ink-4)', loSub);
+      cell('Prev Close', bpsStr(pc),  valColor(pc),  fmtPrevDate(pcDt))+
+      cell('Current',    bpsStr(cur), valColor(cur), "since Today's Open")+
+      cell('Today High', bpsStr(hi),  hi!==null&&hi!==undefined?'var(--better)':'var(--ink-4)', hiT?'set '+shortTime(hiT):'—')+
+      cell('Today Low',  bpsStr(lo),  lo!==null&&lo!==undefined?'var(--worse)' :'var(--ink-4)', loT?'set '+shortTime(loT):'—');
   }
 
   /* ===================================================================
