@@ -301,19 +301,15 @@ body{
 .mdi-hd .mdi-title{font-size:13.5px;font-weight:600}
 .mdi-hd .mdi-sub{font-family:var(--font-mono);font-size:9.5px;color:var(--ink-4);letter-spacing:.04em}
 .mdi-ts{font-family:var(--font-mono);font-size:9.5px;color:var(--ink-4);letter-spacing:.04em;white-space:nowrap;flex:none}
-.mdi-table{width:100%;border-collapse:collapse}
-.mdi-table th{font-family:var(--font-mono);font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-4);padding:8px 18px 7px;border-bottom:1px solid var(--line-strong);white-space:nowrap}
-.mdi-table th:not(:first-child){text-align:right}
-.mdi-table td{font-family:var(--font-mono);font-size:12.5px;padding:7px 18px;border-bottom:1px solid var(--line);vertical-align:middle}
-.mdi-table tr:last-child td{border-bottom:0}
-.mdi-name{color:var(--ink-2);font-size:12.5px}
-.mdi-val{text-align:right;color:var(--ink);font-weight:600}
-.mdi-chg{text-align:right}
-.mdi-bias{text-align:right}
+.mdi-row{padding:9px 18px;border-bottom:1px solid var(--line)}
+.mdi-row:last-child{border-bottom:0}
+.mdi-top{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.mdi-lbl{font-size:12.5px;color:var(--ink-2);flex:1;min-width:0}
+.mdi-cur{font-family:var(--font-mono);font-size:13px;font-weight:600;color:var(--ink);white-space:nowrap;flex:none}
+.mdi-meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:3px;font-family:var(--font-mono);font-size:10px;color:var(--ink-4)}
 .mdi-pos{color:var(--better)}
 .mdi-neg{color:var(--worse)}
 .mdi-neu{color:var(--ink-4)}
-.mdi-upd{text-align:right;font-size:10px;color:var(--ink-4);white-space:nowrap}
 
 /* ---------- economic calendar ---------- */
 .cal-table{width:100%;border-collapse:collapse}
@@ -469,16 +465,7 @@ body{
       </div>
       <span class="mdi-ts" id="mdiTs">—</span>
     </div>
-    <table class="mdi-table">
-      <thead><tr>
-        <th>Indicator</th>
-        <th style="text-align:right">Current</th>
-        <th style="text-align:right">Today</th>
-        <th style="text-align:right">Bias</th>
-        <th style="text-align:right">Updated</th>
-      </tr></thead>
-      <tbody id="mdiBody"><!-- injected --></tbody>
-    </table>
+    <div id="mdiBody"><!-- injected --></div>
   </section>
 
   </div><!-- /mdi-col -->
@@ -1128,14 +1115,14 @@ body{
     // [displayName, currentStr, chgVal, chgUnit, invertBias, isNeutral, rowTs]
     // isNeutral=true: chg stays gray, bias always Neutral (spread rows pending real logic)
     var ROWS=[
-      ["US 10-Year Treasury Yield",          us10y!=null?us10y.toFixed(3)+"%":"N/A",         us10yChg!=null?us10yChg*100:null, " bps", true,  false, liveTs],
-      ["US 30-Year Treasury Yield",          us30y!=null?us30y.toFixed(3)+"%":"N/A",         us30yChg!=null?us30yChg*100:null, " bps", true,  false, liveTs],
-      ["ZN Futures (10-Year Futures)",       zn!=null?zn.toFixed(3):"N/A",                  znChg,                            "",     false, false, liveTs],
-      ["MBB (Mortgage Bond Early Indicator)",mbb!=null?mbb.toFixed(2):"N/A",                mbbChg,                           "",     false, false, liveTs],
-      ["MBS–Treasury Spread",                "N/A",                                          null,                             " bps", false, true,  "—"],
-      ["Primary–Secondary Spread",           "N/A",                                          null,                             " bps", false, true,  "—"],
-      ["2s/10s Yield Curve Spread",          "N/A",                                          null,                             " bps", false, true,  "—"],
-      ["10s/30s Yield Curve Spread",         sp1030!=null?sp1030.toFixed(1)+" bps":"N/A",    sp1030Chg,                        " bps", false, true,  sp1030!=null?liveTs:"—"]
+      ["US10Y Treasury Yield",    us10y!=null?us10y.toFixed(3)+"%":"N/A",      us10yChg!=null?us10yChg*100:null, " bps", true,  false, liveTs],
+      ["US30Y Treasury Yield",    us30y!=null?us30y.toFixed(3)+"%":"N/A",      us30yChg!=null?us30yChg*100:null, " bps", true,  false, liveTs],
+      ["ZN Futures",              zn!=null?zn.toFixed(3):"N/A",                znChg,                            "",     false, false, liveTs],
+      ["MBB",                     mbb!=null?mbb.toFixed(2):"N/A",              mbbChg,                           "",     false, false, liveTs],
+      ["MBS–Treasury Spread",     "N/A",                                        null,                             " bps", false, true,  "—"],
+      ["Primary–Secondary Spread","N/A",                                        null,                             " bps", false, true,  "—"],
+      ["2s/10s Curve Spread",     "N/A",                                        null,                             " bps", false, true,  "—"],
+      ["10s/30s Curve Spread",    sp1030!=null?sp1030.toFixed(1)+" bps":"N/A", sp1030Chg,                        " bps", false, true,  sp1030!=null?liveTs:"—"]
     ];
 
     function biasCell(chgV,inv,neutral){
@@ -1156,13 +1143,17 @@ body{
           if(!neutral) chgColor=(inv?(rounded<0):(rounded>0))?"var(--better)":"var(--worse)";
         }
       }
-      html+='<tr>'+
-        '<td class="mdi-name">'+name+'</td>'+
-        '<td class="mdi-val">'+curStr+'</td>'+
-        '<td class="mdi-chg" style="color:'+chgColor+'">'+chgStr+'</td>'+
-        '<td class="mdi-bias">'+biasCell(chgV,inv,neutral)+'</td>'+
-        '<td class="mdi-upd">'+rowTs+'</td>'+
-      '</tr>';
+      html+='<div class="mdi-row">'+
+        '<div class="mdi-top">'+
+          '<span class="mdi-lbl">'+name+'</span>'+
+          '<span class="mdi-cur">'+curStr+'</span>'+
+        '</div>'+
+        '<div class="mdi-meta">'+
+          '<span>Today&thinsp;<span style="color:'+chgColor+';font-weight:500">'+chgStr+'</span></span>'+
+          '<span>Bias&thinsp;'+biasCell(chgV,inv,neutral)+'</span>'+
+          '<span>Updated&thinsp;<span style="color:var(--ink-4)">'+rowTs+'</span></span>'+
+        '</div>'+
+      '</div>';
     });
 
     $("mdiBody").innerHTML=html;
