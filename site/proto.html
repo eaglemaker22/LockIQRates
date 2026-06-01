@@ -246,6 +246,14 @@ body{
 .q-bad{color:var(--worse)!important}
 .q-dot{width:7px;height:7px;border-radius:50%;flex:none}
 
+/* ---------- lri intraday stats strip ---------- */
+.lri-stats-strip{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin:10px -20px 16px}
+.lri-stat-cell{padding:10px 20px;border-right:1px solid var(--line)}
+.lri-stat-cell:last-child{border-right:0}
+.lri-stat-lbl{font-family:var(--font-mono);font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-4);margin-bottom:5px}
+.lri-stat-val{font-family:var(--font-mono);font-size:17px;font-weight:700;letter-spacing:-.01em;line-height:1}
+.lri-stat-sub{font-family:var(--font-mono);font-size:9.5px;color:var(--ink-4);margin-top:4px}
+
 /* ---------- error module ---------- */
 .errmod{padding:34px 24px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px}
 .errmod .ic{width:34px;height:34px;color:var(--worse);opacity:.8}
@@ -431,6 +439,8 @@ body{
       </div>
     </div>
 
+    <div id="lriStats" class="lri-stats-strip"></div>
+
     <div class="override" id="override" style="display:none">
       <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg>
       <div class="tx" id="overrideTx"></div>
@@ -612,7 +622,10 @@ body{
     anchor_date:"2026-05-30", conv_dollars_per_100k:-6, conv_lri_bps:-0.6,
     anchor_status:"GOOD", gov_lri_bps:-0.2, trading_date:"2026-05-30",
     anchor_time:"07:15:00", conv_direction:"FLAT", gov_dollars_per_100k:-2,
-    confidence:"OK_WITH_WARNINGS", _demo:true
+    confidence:"OK_WITH_WARNINGS",
+    intraday_high_conv_bps:4.6,  intraday_high_conv_time:"2026-05-30 08:34:00",
+    intraday_low_conv_bps:-28.3, intraday_low_conv_time:"2026-05-30 06:00:00",
+    _demo:true
   };
   var DEMO_MARKET = {
     shadow_bonds:{
@@ -792,6 +805,43 @@ body{
     var cfCls=qClass(c.confidence);
     $("sConfidence").innerHTML='<span class="'+cfCls+'">'+(c.confidence||"—")+'</span>';
     $("sUpdated").textContent=c.last_updated||"—";
+  }
+
+  /* ===================================================================
+     RENDER: LRI intraday stats strip (CURRENT / TODAY HIGH / TODAY LOW)
+  =================================================================== */
+  function renderLRIStats(c){
+    var el=$("lriStats");
+    if(!el) return;
+
+    var cur=c?c.conv_lri_bps:null;
+    var hi =c?c.intraday_high_conv_bps:null;
+    var hiT=c?c.intraday_high_conv_time:null;
+    var lo =c?c.intraday_low_conv_bps:null;
+    var loT=c?c.intraday_low_conv_time:null;
+
+    var curColor=(cur===null||cur===undefined||Math.abs(cur)<0.05)
+      ?"var(--ink-4)":(cur>0?"var(--better)":"var(--worse)");
+
+    function cell(lbl,valStr,valColor,subStr){
+      return '<div class="lri-stat-cell">'+
+        '<div class="lri-stat-lbl">'+lbl+'</div>'+
+        '<div class="lri-stat-val" style="color:'+valColor+'">'+valStr+'</div>'+
+        '<div class="lri-stat-sub">'+subStr+'</div>'+
+      '</div>';
+    }
+
+    var curStr=cur!==null&&cur!==undefined?fmtBps(cur)+' bps':'—';
+    var hiStr =hi!==null&&hi!==undefined?fmtBps(hi)+' bps':'—';
+    var loStr =lo!==null&&lo!==undefined?fmtBps(lo)+' bps':'—';
+
+    var hiSub=hiT?'set '+shortTime(hiT):'—';
+    var loSub=loT?'set '+shortTime(loT):'—';
+
+    el.innerHTML=
+      cell('Current',   curStr, curColor,          "since Today's Open")+
+      cell('Today High',hiStr,  hi!==null&&hi!==undefined?'var(--better)':'var(--ink-4)', hiSub)+
+      cell('Today Low', loStr,  lo!==null&&lo!==undefined?'var(--worse)' :'var(--ink-4)', loSub);
   }
 
   /* ===================================================================
@@ -1320,6 +1370,7 @@ body{
       renderHeader(c);
       renderCards(c);
       renderStrip(c);
+      renderLRIStats(c);
       if(c._demo) $("foot").textContent="LOCKIQ RATE IMPACT · STANDALONE PROTOTYPE · SAMPLE DATA (endpoint unreachable in preview)";
 
       var cd=state.overrideDate||c.trading_date||todayISO();
@@ -1335,6 +1386,7 @@ body{
     }).catch(function(){
       renderCardsError();
       renderStrip({});
+      renderLRIStats({});
       setChartError();
     });
 
