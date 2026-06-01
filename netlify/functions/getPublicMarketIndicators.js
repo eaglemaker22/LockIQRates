@@ -12,7 +12,8 @@
 //   MBB_Current,   delta_MBB          (MBB ETF + change from today's open)
 //
 // Fields used from us30y_current:
-//   US30Y_Daily_Change                (current − prior_day_close, in yield % pts)
+//   US30Y_Daily_Change                (scraper-computed; "N/A" when prior close missing)
+//   US30Y_Current, US30Y_PriorDayClose (fallback: compute change when Daily_Change is N/A)
 
 const { initializeApp, cert, getApps } = require("firebase-admin/app");
 const { getFirestore } = require("firebase-admin/firestore");
@@ -101,16 +102,26 @@ exports.handler = async (event) => {
     // US10Y: change from today's open in bps
     const us10yBps = d10y !== null ? r1(d10y * 100) : null;
 
-    // US30Y: daily change (current − prior close) from us30y_current
-    // Stored as yield % points; "N/A" when prior close unavailable → n() → null
-    const us30yChg = n(us30yDoc.US30Y_Daily_Change);
-    const us30yBps = us30yChg !== null ? r1(us30yChg * 100) : null;
+    // US30Y: daily change (current − prior close), yield % pts → bps
+    // Two-step: (1) scraper-computed Daily_Change; (2) compute from Current − PriorDayClose.
+    // Daily_Change is stored as "N/A" (string) when prior close is missing → n() → null.
+    let us30yBps = null;
+    const us30yDailyChg = n(us30yDoc.US30Y_Daily_Change);
+    if (us30yDailyChg !== null) {
+      us30yBps = r1(us30yDailyChg * 100);
+    } else {
+      const us30yCurDoc   = n(us30yDoc.US30Y_Current);
+      const us30yPriorDoc = n(us30yDoc.US30Y_PriorDayClose);
+      if (us30yCurDoc !== null && us30yPriorDoc !== null && us30yPriorDoc > 0) {
+        us30yBps = r1((us30yCurDoc - us30yPriorDoc) * 100);
+      }
+    }
 
     // ZN: price-point change from today's open
     const znChg = dZN !== null ? r2(dZN) : null;
 
-    // MBB: price-point change from open expressed as bps (1 pt = 100 bps of price)
-    const mbbBps = dMBB !== null ? r1(dMBB * 100) : null;
+    // MBB: price-point change from today's open (displayed as pts, not bps)
+    const mbbChg = dMBB !== null ? r2(dMBB) : null;
 
     // 2s/10s curve spread — both US2Y and US10Y available via shadow_bonds
     const sp2s10s    = (us2y !== null && us10y !== null)
@@ -153,12 +164,12 @@ exports.handler = async (event) => {
         zn !== null ? fetchedAt : null,
         zn !== null ? "LIVE" : "UNAVAILABLE"),
 
-      // Mortgage Bond Momentum (MBB): change from open in bps (1 price pt = 100 bps)
+      // Mortgage Bond Momentum (MBB): price-point change from today's open, shown as pts
       row("mbb", "Mortgage Bond Momentum",
         mbb !== null ? mbb.toFixed(2) : null,
         null,
-        mbbBps,
-        mbbBps !== null ? "bps" : null,
+        mbbChg,
+        mbbChg !== null ? "pts" : null,
         calcBias(dMBB, false),
         mbb !== null ? fetchedAt : null,
         mbb !== null ? "LIVE" : "UNAVAILABLE"),

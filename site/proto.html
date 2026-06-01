@@ -670,7 +670,7 @@ body{
       {id:"us10y",         label:"US10Y Treasury Yield",     current:"4.432%",   today_change_bps:-4.1, today_change_value:null, today_change_unit:"bps", bias:"Better",  updated:"2026-05-30T16:30:00Z", status:"LIVE"},
       {id:"us30y",         label:"US30Y Treasury Yield",     current:"4.891%",   today_change_bps:-2.8, today_change_value:null, today_change_unit:"bps", bias:"Better",  updated:"2026-05-30T16:30:00Z", status:"LIVE"},
       {id:"zn",            label:"10Y Futures",              current:"108.453",  today_change_bps:null, today_change_value:0.125,today_change_unit:"pts", bias:"Better",  updated:"2026-05-30T16:30:00Z", status:"LIVE"},
-      {id:"mbb",           label:"Mortgage Bond Momentum",   current:"96.14",    today_change_bps:null, today_change_value:9.0,  today_change_unit:"bps", bias:"Better",  updated:"2026-05-30T16:30:00Z", status:"LIVE"},
+      {id:"mbb",           label:"Mortgage Bond Momentum",   current:"96.14",    today_change_bps:null, today_change_value:-0.52,today_change_unit:"pts", bias:"Worse",   updated:"2026-05-30T16:30:00Z", status:"LIVE"},
       {id:"mbs_tsy_spread",label:"MBS–Treasury Spread",      current:null,       today_change_bps:null, today_change_value:null, today_change_unit:null,  bias:"Neutral", updated:null,                   status:"PENDING"},
       {id:"ps_spread",     label:"Primary–Secondary Spread", current:null,       today_change_bps:null, today_change_value:null, today_change_unit:null,  bias:"Neutral", updated:null,                   status:"PENDING"},
       {id:"curve_2s10s",   label:"2s/10s Curve Spread",      current:"35.2 bps",today_change_bps:-1.4, today_change_value:null, today_change_unit:"bps", bias:"Neutral", updated:"2026-05-30T16:30:00Z", status:"LIVE"},
@@ -1203,7 +1203,7 @@ body{
     // Public-facing label overrides + native title tooltips
     var LABEL_MAP={
       zn: {display:"10Y Futures",            title:"Tracked using ZN (10-Year Treasury note futures)"},
-      mbb:{display:"Mortgage Bond Momentum",  title:"Uses MBB ETF as a proxy for short-term mortgage-bond price movement"}
+      mbb:{display:"Mortgage Bond Momentum",  title:"Uses MBB as a public mortgage-bond proxy. This is the ETF price move, not UMBS pricing and not lender rate-sheet impact."}
     };
 
     function biasBadge(b){
@@ -1266,11 +1266,11 @@ body{
       }
 
       else if(ind.id==="mbb"){
-        // Hero = bps change from open (1 price pt = 100 bps); null → "Change pending"
+        // Hero = price-point change from today's open in pts; null → "Change pending"
         if(chgVal!==null&&chgVal!==undefined&&chgUnit){
-          var bpsV=r1(chgVal);
-          if(Math.abs(bpsV)>=0.05){
-            heroStr=(bpsV>0?"+":"")+bpsV.toFixed(1)+" "+chgUnit+" today";
+          var ptsV=r2(chgVal);
+          if(Math.abs(ptsV)>=0.005){
+            heroStr=(ptsV>0?"+":"")+ptsV.toFixed(2)+" "+chgUnit+" today";
             heroColor=biasColor;
           } else {
             heroStr="0 "+chgUnit+" today"; heroColor="var(--ink-4)";
