@@ -305,13 +305,14 @@ body{
 .mdi-row:last-child{border-bottom:0}
 .mdi-top{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
 .mdi-lbl{font-size:12.5px;color:var(--ink-2);flex:1;min-width:0}
-.mdi-cur{font-family:var(--font-mono);font-size:13px;font-weight:600;color:var(--ink);white-space:nowrap;flex:none}
-.mdi-meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:3px;font-family:var(--font-mono);font-size:10px;color:var(--ink-4)}
+.mdi-hero{font-family:var(--font-mono);font-size:13px;font-weight:700;white-space:nowrap;flex:none;text-align:right}
+.mdi-meta{display:flex;flex-wrap:wrap;gap:0;margin-top:3px;font-family:var(--font-mono);font-size:10px;color:var(--ink-4);align-items:center}
+.mdi-sep{color:var(--ink-4);padding:0 5px;line-height:1}
 .mdi-pos{color:var(--better)}
 .mdi-neg{color:var(--worse)}
 .mdi-neu{color:var(--ink-4)}
 .mdi-row-pending .mdi-lbl{color:var(--ink-4)}
-.mdi-row-pending .mdi-cur{color:var(--ink-4)}
+.mdi-row-pending .mdi-hero{color:var(--ink-4)}
 
 /* ---------- economic calendar ---------- */
 .cal-table{width:100%;border-collapse:collapse}
@@ -463,7 +464,7 @@ body{
     <div class="mdi-hd">
       <div class="mdi-left">
         <span class="mdi-title">Market Direction Indicators</span>
-        <span class="mdi-sub">Key mortgage market drivers behind rate-pricing direction.</span>
+        <span class="mdi-sub">Key drivers behind mortgage-pricing movement.</span>
       </div>
       <span class="mdi-ts" id="mdiTs">—</span>
     </div>
@@ -1130,45 +1131,119 @@ body{
       return;
     }
 
-    // IDs whose change is already in bps; ZN and MBB use raw price points (no " bps" suffix)
-    var BPS_IDS={us10y:true,us30y:true,mbs_tsy_spread:true,ps_spread:true,curve_2s10s:true,curve_10s30s:true};
+    // Public-facing label overrides + native title tooltips
+    var LABEL_MAP={
+      zn: {display:"10Y Futures",            title:"Tracked using ZN (10-Year Treasury note futures)"},
+      mbb:{display:"Mortgage Bond Momentum",  title:"Uses MBB ETF as a proxy for short-term mortgage-bond price movement"}
+    };
 
-    function biasBadge(bias){
-      if(bias==="Better") return '<span class="mdi-pos">Better</span>';
-      if(bias==="Worse")  return '<span class="mdi-neg">Worse</span>';
+    function biasBadge(b){
+      if(b==="Better")  return '<span class="mdi-pos">Better</span>';
+      if(b==="Worse")   return '<span class="mdi-neg">Worse</span>';
+      if(b==="Pending") return '<span class="mdi-neu">Pending</span>';
       return '<span class="mdi-neu">Neutral</span>';
     }
+    function sep(){return '<span class="mdi-sep">·</span>';}
+    function updSpan(upd){return '<span>Updated <span style="color:var(--ink-4)">'+(upd||"—")+'</span></span>';}
+    function r1(v){return Math.round(v*10)/10;}
+    function r2(v){return Math.round(v*100)/100;}
 
-    var html="";
-    inds.forEach(function(ind){
+    function buildRow(ind){
+      var lm=LABEL_MAP[ind.id];
+      var displayLabel=lm?lm.display:ind.label;
+      var titleAttr=lm?' title="'+lm.title+'"':"";
       var isPending=ind.status==="PENDING";
-      var cur=ind.current!=null?ind.current:"N/A";
+      var bias=ind.bias||"Neutral";
       var upd=ind.updated?fmtISOTime(ind.updated):"—";
-      var unit=BPS_IDS[ind.id]?" bps":"";
+      var chg=ind.today_change_bps;
+      var cur=ind.current;
+      var biasColor=bias==="Better"?"var(--better)":bias==="Worse"?"var(--worse)":"var(--ink-4)";
 
-      var chgStr="0"+unit, chgColor="var(--ink-4)";
-      if(!isPending&&ind.today_change_bps!=null){
-        var rounded=Math.round(ind.today_change_bps*10)/10;
-        if(Math.abs(rounded)>=0.05){
-          chgStr=(rounded>0?"+":"")+rounded.toFixed(1)+unit;
-          chgColor=ind.bias==="Better"?"var(--better)":ind.bias==="Worse"?"var(--worse)":"var(--ink-4)";
+      var heroStr,heroColor,metaHtml;
+
+      if(ind.id==="us10y"||ind.id==="us30y"){
+        // Hero = today's bps change
+        var bps=chg!=null?r1(chg):null;
+        if(bps!=null&&Math.abs(bps)>=0.05){
+          heroStr=(bps>0?"+":"")+bps.toFixed(1)+" bps today";
+          heroColor=biasColor;
+        } else {
+          heroStr="0 bps today"; heroColor="var(--ink-4)";
         }
+        metaHtml=(cur?'<span style="color:var(--ink-2)">'+cur+'</span>'+sep():"")
+          +biasBadge(bias)+sep()+updSpan(upd);
       }
 
-      html+='<div class="mdi-row'+(isPending?" mdi-row-pending":"")+'">'+
-        '<div class="mdi-top">'+
-          '<span class="mdi-lbl">'+ind.label+'</span>'+
-          '<span class="mdi-cur">'+cur+'</span>'+
-        '</div>'+
-        '<div class="mdi-meta">'+
-          '<span>Today&thinsp;<span style="color:'+chgColor+';font-weight:500">'+chgStr+'</span></span>'+
-          '<span>Bias&thinsp;'+biasBadge(ind.bias)+'</span>'+
-          '<span>Updated&thinsp;<span style="color:var(--ink-4)">'+upd+'</span></span>'+
-        '</div>'+
-      '</div>';
-    });
+      else if(ind.id==="zn"){
+        // Hero = futures price change in pts
+        var pts=chg!=null?r2(chg):null;
+        if(pts!=null&&Math.abs(pts)>=0.005){
+          heroStr=(pts>0?"+":"")+pts.toFixed(2)+" pts today";
+          heroColor=biasColor;
+        } else {
+          heroStr="0 pts today"; heroColor="var(--ink-4)";
+        }
+        metaHtml=biasBadge(bias)+sep()+updSpan(upd);
+      }
 
-    $("mdiBody").innerHTML=html;
+      else if(ind.id==="mbb"){
+        // Hero = % change (derived from price change / current price)
+        var curPrice=cur?parseFloat(cur):null;
+        if(chg!=null&&curPrice&&curPrice>0){
+          var pct=r2(chg/curPrice*100);
+          if(Math.abs(pct)>=0.005){
+            heroStr=(pct>0?"+":"")+pct.toFixed(2)+"% today";
+            heroColor=biasColor;
+          } else {
+            heroStr="0% today"; heroColor="var(--ink-4)";
+          }
+        } else if(chg!=null&&Math.abs(r2(chg))>=0.005){
+          heroStr=(chg>0?"+":"")+r2(chg).toFixed(2)+" pts today";
+          heroColor=biasColor;
+        } else {
+          heroStr="0% today"; heroColor="var(--ink-4)";
+        }
+        metaHtml=biasBadge(bias)+sep()+updSpan(upd);
+      }
+
+      else if(ind.id==="curve_10s30s"){
+        // Hero = current spread value; secondary shows today's change
+        heroStr=cur!=null?cur:"N/A";
+        heroColor=cur!=null?"var(--ink)":"var(--ink-4)";
+        var chgBps=chg!=null?r1(chg):null;
+        var chgLabel=(chgBps!=null&&Math.abs(chgBps)>=0.05)
+          ?((chgBps>0?"+":"")+chgBps.toFixed(1)+" bps"):"0 bps";
+        metaHtml='<span>Today <span style="color:var(--ink-2)">'+chgLabel+'</span></span>'
+          +sep()+biasBadge(bias)+sep()+updSpan(upd);
+      }
+
+      else if(ind.id==="curve_2s10s"){
+        // US2Y not available — fully pending
+        heroStr="N/A"; heroColor="var(--ink-4)";
+        metaHtml='<span class="mdi-neu">Pending</span>'+sep()+updSpan("—");
+      }
+
+      else if(isPending){
+        // MBS-Tsy, P-S: placeholder change of 0
+        heroStr="0 bps today"; heroColor="var(--ink-4)";
+        metaHtml=biasBadge(bias)+sep()+updSpan("—");
+      }
+
+      else {
+        heroStr=cur!=null?cur:"—"; heroColor="var(--ink)";
+        metaHtml=biasBadge(bias)+sep()+updSpan(upd);
+      }
+
+      return '<div class="mdi-row'+(isPending?" mdi-row-pending":"")+'">'+
+        '<div class="mdi-top">'+
+          '<span class="mdi-lbl"'+titleAttr+'>'+displayLabel+'</span>'+
+          '<span class="mdi-hero" style="color:'+heroColor+'">'+heroStr+'</span>'+
+        '</div>'+
+        '<div class="mdi-meta">'+metaHtml+'</div>'+
+      '</div>';
+    }
+
+    $("mdiBody").innerHTML=inds.map(buildRow).join("");
   }
 
   /* ===================================================================
