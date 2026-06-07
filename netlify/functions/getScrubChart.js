@@ -42,9 +42,17 @@ const CONV_FIELD         = 'conv_index_pts';
 const GOV_FIELD          = 'govt_index_pts';
 const LABEL_FIELD        = 'label';
 const ANCHOR_MIN         = 7 * 60 + 15;     // 7:15 AM AZ — for the "Since Rate Sheets" preset
-const RANGE_DAYS         = { '1d': 0, '5d': 4, '1m': 21 }; // archived days to prepend
+const RANGE_DAYS         = { '1d': 0, '2d': 1, '5d': 4, '1m': 21, '3m': 63 }; // archived days to prepend
+const DAILY_RANGES       = new Set(['1m', '3m']); // these return ONE point per day (daily close), not intraday
 
 const num = v => (typeof v === 'number' && isFinite(v)) ? v : null;
+
+// 'YYYY-MM-DD' -> 'M/D' (no Date() to avoid TZ drift)
+function fmtDate(d) {
+  if (!d) return '';
+  const p = String(d).split('-');
+  return p.length === 3 ? (+p[1]) + '/' + (+p[2]) : String(d);
+}
 
 function labelToMin(label) {
   const m = /(\d+):(\d+)\s*(AM|PM)/i.exec(label || '');
@@ -106,6 +114,7 @@ exports.handler = async (event) => {
 
     const out = [];
     let prevConv = null, prevGov = null, todayStartIdx = 0;
+    const segMeta = [];   // { date, endIdx } per segment — used for the daily rollup
     for (const seg of segments) {
       const offC = prevConv === null ? 0 : prevConv - seg.points[0].conv_pts;
       const offG = prevGov  === null ? 0 : prevGov  - seg.points[0].gov_pts;
@@ -115,6 +124,7 @@ exports.handler = async (event) => {
       }
       prevConv = out[out.length - 1].conv_pts;
       prevGov  = out[out.length - 1].gov_pts;
+      segMeta.push({ date: seg.date, endIdx: out.length - 1 });
     }
 
     // 4) to the chart's wire shape (bps = pts * 100)
@@ -123,6 +133,32 @@ exports.handler = async (event) => {
       conv_bps: +(p.conv_pts * 100).toFixed(1),
       gov_bps:  +(p.gov_pts  * 100).toFixed(1),
     }));
+
+    // 4b) DAILY ROLLUP (1m / 3m): one point per day = that day's last (close) value on the
+    //     continuous backbone. Tiny payload, date-labeled, and the rate-impact3 chart consumes
+    //     it directly (it reads p.date + p.t). The intraday series above is skipped for these.
+    if (DAILY_RANGES.has(range)) {
+      const daily = segMeta.map(sm => ({
+        t: fmtDate(sm.date),
+        date: sm.date,
+        conv_bps: series[sm.endIdx].conv_bps,
+        gov_bps:  series[sm.endIdx].gov_bps,
+      }));
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify({
+          range,
+          tz: 'AZ',
+          resolution: 'daily',
+          asOf: daily.length ? daily[daily.length - 1].date : null,
+          series: daily,
+          presets: { open: 0, rateSheets: 0, prevClose: daily.length > 1 ? daily.length - 2 : 0 },
+          todayStartIdx: Math.max(0, daily.length - 1),
+          state: 'live',
+        }),
+      };
+    }
 
     // 5) presets (indices into series)
     //    open       = first point of today
